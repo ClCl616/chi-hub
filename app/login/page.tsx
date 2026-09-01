@@ -1,0 +1,2 @@
+import Link from 'next/link'; import { ArrowLeft, LogIn } from 'lucide-react';
+export default function Page(){return <main className="login-page"><section className="login-card"><Link className="public-brand" href="/"><span className="brand-mark">C</span> CHI.HUB</Link><div><p className="eyebrow">PRIVATE SPACE</p><h1>나의 허브로<br/>돌아오세요.</h1><p>Supabase 인증 연결 후 이메일 또는 소셜 계정으로 로그인할 수 있습니다.</p></div><button disabled type="button"><LogIn size={17}/> 로그인 준비 중</button><Link href="/"><ArrowLeft size={15}/> 둘러보기로 돌아가기</Link></section></main>}
