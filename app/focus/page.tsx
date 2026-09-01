@@ -1,2 +1,3 @@
-import { TimerReset } from 'lucide-react'; import { EmptyFeature } from '@/components/empty-feature';
-export default function Page(){return <EmptyFeature icon={TimerReset} eyebrow="POMODORO" title="집중" description="몰입한 시간을 쌓고 나만의 공부 리듬을 찾아보세요." action="새 집중 세션"/>}
+import { AppShell } from '@/components/app-shell';
+import { FocusTimer } from '@/components/focus-timer';
+export default function FocusPage(){return <AppShell><div className="focus-page"><header className="feature-heading"><p className="eyebrow">POMODORO</p><h1>집중</h1><p>해야 할 일을 하나 고르고, 지금 이 시간에만 몰입하세요.</p></header><FocusTimer/></div></AppShell>}
