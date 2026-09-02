@@ -1,9 +1,119 @@
 'use client';
 import { useState } from 'react';
 import { LoaderCircle, LogIn, UserPlus } from 'lucide-react';
-type Mode='login'|'signup';
-export function LoginForm(){
- const [mode,setMode]=useState<Mode>('login');const [pending,setPending]=useState(false);const [message,setMessage]=useState<{type:'error'|'success';text:string}|null>(null);
- async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPending(true);setMessage(null);const form=new FormData(event.currentTarget);const response=await fetch(`/api/auth/${mode}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:form.get('email'),password:form.get('password')})});const data=await response.json().catch(()=>({message:'요청을 처리하지 못했습니다.'}));setPending(false);if(!response.ok){setMessage({type:'error',text:data.message??'로그인에 실패했습니다.'});return}if(mode==='signup'){setMessage({type:'success',text:'가입 확인 메일을 보냈습니다. 이메일을 확인해주세요.'});return}window.location.href='/';}
- return <div className="auth-form-wrap"><div className="auth-tabs" role="tablist"><button className={mode==='login'?'active':''} onClick={()=>{setMode('login');setMessage(null)}} role="tab" type="button">로그인</button><button className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setMessage(null)}} role="tab" type="button">회원가입</button></div><form className="auth-form" onSubmit={submit}><label><span>이메일</span><input autoComplete="email" name="email" placeholder="you@example.com" required type="email"/></label><label><span>비밀번호</span><input autoComplete={mode==='login'?'current-password':'new-password'} minLength={8} name="password" placeholder="8자 이상 입력" required type="password"/></label>{message&&<p className={`auth-message ${message.type}`} role="status">{message.text}</p>}<button className="auth-submit" disabled={pending} type="submit">{pending?<LoaderCircle className="spin" size={17}/>:mode==='login'?<LogIn size={17}/>:<UserPlus size={17}/>} {pending?'처리 중':mode==='login'?'로그인':'계정 만들기'}</button></form></div>;
+import { useSearchParams } from 'next/navigation';
+type Mode = 'login' | 'signup';
+export function LoginForm() {
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<Mode>('login');
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<{
+    type: 'error' | 'success';
+    text: string;
+  } | null>(null);
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setMessage(null);
+    const form = new FormData(event.currentTarget);
+    const response = await fetch(`/api/auth/${mode}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: form.get('email'),
+        password: form.get('password'),
+      }),
+    });
+    const data = (await response
+      .json()
+      .catch(() => ({ message: '요청을 처리하지 못했습니다.' }))) as {
+      message?: string;
+    };
+    setPending(false);
+    if (!response.ok) {
+      setMessage({
+        type: 'error',
+        text: data.message ?? '로그인에 실패했습니다.',
+      });
+      return;
+    }
+    if (mode === 'signup') {
+      setMessage({
+        type: 'success',
+        text: '가입 확인 메일을 보냈습니다. 이메일을 확인해주세요.',
+      });
+      return;
+    }
+    const returnTo = searchParams.get('returnTo');
+    window.location.href =
+      returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+  }
+  return (
+    <div className="auth-form-wrap">
+      <div className="auth-tabs" role="tablist">
+        <button
+          className={mode === 'login' ? 'active' : ''}
+          onClick={() => {
+            setMode('login');
+            setMessage(null);
+          }}
+          role="tab"
+          type="button"
+        >
+          로그인
+        </button>
+        <button
+          className={mode === 'signup' ? 'active' : ''}
+          onClick={() => {
+            setMode('signup');
+            setMessage(null);
+          }}
+          role="tab"
+          type="button"
+        >
+          회원가입
+        </button>
+      </div>
+      <form className="auth-form" onSubmit={submit}>
+        <label>
+          <span>이메일</span>
+          <input
+            autoComplete="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+            type="email"
+          />
+        </label>
+        <label>
+          <span>비밀번호</span>
+          <input
+            autoComplete={
+              mode === 'login' ? 'current-password' : 'new-password'
+            }
+            minLength={8}
+            name="password"
+            placeholder="8자 이상 입력"
+            required
+            type="password"
+          />
+        </label>
+        {message && (
+          <output className={`auth-message ${message.type}`}>
+            {message.text}
+          </output>
+        )}
+        <button className="auth-submit" disabled={pending} type="submit">
+          {pending ? (
+            <LoaderCircle className="spin" size={17} />
+          ) : mode === 'login' ? (
+            <LogIn size={17} />
+          ) : (
+            <UserPlus size={17} />
+          )}{' '}
+          {pending ? '처리 중' : mode === 'login' ? '로그인' : '계정 만들기'}
+        </button>
+      </form>
+    </div>
+  );
 }

@@ -1,2 +1,13 @@
-import { NotebookPen } from 'lucide-react'; import { EmptyFeature } from '@/components/empty-feature';
-export default function Page(){return <EmptyFeature icon={NotebookPen} eyebrow="QUICK NOTES" title="메모" description="떠오른 생각을 놓치지 않도록 빠르게 적어두세요." action="새 메모"/>}
+import { FeatureLayout } from '@/components/feature-layout';
+import { NotesWorkspace } from '@/components/notes-workspace';
+export default function Page() {
+  return (
+    <FeatureLayout
+      eyebrow="QUICK NOTES"
+      title="메모"
+      description="생각을 빠르게 적고, 검색하고, 중요한 메모를 고정하세요."
+    >
+      <NotesWorkspace />
+    </FeatureLayout>
+  );
+}

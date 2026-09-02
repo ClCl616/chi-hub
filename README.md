@@ -1,22 +1,32 @@
 # CHI.HUB
 
-CHI.LOG를 확장한 개인용 멀티툴의 초기 기반입니다. Next.js App Router 호환 구조, TypeScript, 모바일 우선 UI, PWA, Supabase 연결 골격을 포함합니다.
+기록하고, 몰입하고, 성장하는 개인용 라이프 허브입니다. 모바일 우선 UI, PWA, Supabase 인증·데이터베이스·비공개 파일 보관함을 포함합니다.
 
-## 시작하기
+## 주요 기능
+
+- 실제 기록을 요약하는 홈 대시보드
+- 새로고침과 백그라운드 전환에도 이어지는 집중 타이머와 세션 기록
+- 일일 루틴 체크와 수면 기록·평균
+- 운동 기록과 최근 7일 통계
+- 검색·고정·편집·삭제가 가능한 메모
+- Supabase Storage 기반 비공개 파일 업로드·다운로드·삭제
+- 이메일 회원가입, 로그인, 복귀 경로, 로그아웃
+
+## 로컬 실행
 
 ```bash
 npm install
-cp .env.example .env.local
+copy .env.example .env.local
 npm run dev
 ```
 
-Supabase 프로젝트 URL과 anon key를 `.env.local`에 입력하면 이후 인증·DB·Storage 기능을 연결할 수 있습니다.
+`.env.local`에 Supabase 프로젝트 URL과 anon key를 입력하고, `supabase/migrations/0001_initial_schema.sql`을 Supabase SQL Editor 또는 CLI로 적용하세요. Supabase Auth의 Site URL과 Redirect URL에는 로컬 주소와 운영 주소의 `/auth/callback`을 등록해야 합니다.
 
-## 현재 범위
+## 검증
 
-- 반응형 공통 앱 셸과 모바일 하단 내비게이션
-- 대시보드 대표 화면
-- 집중, 루틴·수면, 운동, 메모, 파일의 빈 상태 화면
-- 공개 포트폴리오와 CHI.LOG 이전 자리
-- 로그인 준비 화면 및 Supabase 클라이언트 기반
-- 웹 앱 매니페스트와 서비스 워커
+```bash
+npm run lint
+npm run build
+```
+
+운영 배포는 `.openai/hosting.json`의 Sites 프로젝트 설정을 사용합니다.

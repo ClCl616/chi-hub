@@ -10,17 +10,17 @@ export async function GET() {
         { status: 401 },
       );
     const { data, error } = await supabase
-      .from('focus_sessions')
-      .select('id,task,mode,duration_seconds,completed_at')
-      .order('completed_at', { ascending: false })
-      .limit(50);
+      .from('workout_logs')
+      .select('id,title,workout_date,duration_minutes,note,created_at')
+      .order('workout_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw error;
-    return NextResponse.json({ sessions: data });
+    return NextResponse.json({ workouts: data });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });
   }
 }
-
 export async function POST(request: Request) {
   try {
     const { supabase, user } = await getAuthContext();
@@ -33,36 +33,42 @@ export async function POST(request: Request) {
       string,
       string | number | boolean | null | undefined
     >;
+    const title = String(body.title ?? '')
+      .trim()
+      .slice(0, 80);
+    const duration = Number(body.durationMinutes);
     if (
-      typeof body.durationSeconds !== 'number' ||
-      body.durationSeconds < 1 ||
-      body.durationSeconds > 14_400 ||
-      typeof body.mode !== 'string' ||
-      !['focus', 'short', 'long'].includes(body.mode)
+      !title ||
+      typeof body.date !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
+      !Number.isFinite(duration) ||
+      duration < 1 ||
+      duration > 1440
     )
       return NextResponse.json(
-        { message: '잘못된 세션입니다.' },
+        { message: '운동 이름, 날짜, 시간을 확인해주세요.' },
         { status: 400 },
       );
     const { data, error } = await supabase
-      .from('focus_sessions')
+      .from('workout_logs')
       .insert({
         user_id: user.id,
-        task: String(body.task ?? '')
-          .trim()
-          .slice(0, 80),
-        mode: body.mode,
-        duration_seconds: Math.round(body.durationSeconds),
+        title,
+        workout_date: body.date,
+        duration_minutes: Math.round(duration),
+        note:
+          String(body.note ?? '')
+            .trim()
+            .slice(0, 500) || null,
       })
-      .select('id,task,mode,duration_seconds,completed_at')
+      .select()
       .single();
     if (error) throw error;
-    return NextResponse.json({ session: data }, { status: 201 });
+    return NextResponse.json({ workout: data }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });
   }
 }
-
 export async function DELETE(request: Request) {
   try {
     const { supabase, user } = await getAuthContext();
@@ -74,13 +80,10 @@ export async function DELETE(request: Request) {
     const id = new URL(request.url).searchParams.get('id');
     if (!id)
       return NextResponse.json(
-        { message: '삭제할 기록을 선택해주세요.' },
+        { message: '기록을 선택해주세요.' },
         { status: 400 },
       );
-    const { error } = await supabase
-      .from('focus_sessions')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('workout_logs').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error) {

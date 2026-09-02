@@ -10,12 +10,12 @@ export async function GET() {
         { status: 401 },
       );
     const { data, error } = await supabase
-      .from('focus_sessions')
-      .select('id,task,mode,duration_seconds,completed_at')
-      .order('completed_at', { ascending: false })
-      .limit(50);
+      .from('sleep_logs')
+      .select('id,slept_at,woke_at,quality,note,created_at')
+      .order('woke_at', { ascending: false })
+      .limit(30);
     if (error) throw error;
-    return NextResponse.json({ sessions: data });
+    return NextResponse.json({ logs: data });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });
   }
@@ -33,31 +33,34 @@ export async function POST(request: Request) {
       string,
       string | number | boolean | null | undefined
     >;
+    const sleptAt = new Date(String(body.sleptAt ?? ''));
+    const wokeAt = new Date(String(body.wokeAt ?? ''));
     if (
-      typeof body.durationSeconds !== 'number' ||
-      body.durationSeconds < 1 ||
-      body.durationSeconds > 14_400 ||
-      typeof body.mode !== 'string' ||
-      !['focus', 'short', 'long'].includes(body.mode)
+      !Number.isFinite(sleptAt.getTime()) ||
+      !Number.isFinite(wokeAt.getTime()) ||
+      wokeAt <= sleptAt
     )
       return NextResponse.json(
-        { message: '잘못된 세션입니다.' },
+        { message: '취침·기상 시간을 확인해주세요.' },
         { status: 400 },
       );
+    const quality = Number(body.quality);
     const { data, error } = await supabase
-      .from('focus_sessions')
+      .from('sleep_logs')
       .insert({
         user_id: user.id,
-        task: String(body.task ?? '')
-          .trim()
-          .slice(0, 80),
-        mode: body.mode,
-        duration_seconds: Math.round(body.durationSeconds),
+        slept_at: sleptAt.toISOString(),
+        woke_at: wokeAt.toISOString(),
+        quality: quality >= 1 && quality <= 5 ? quality : null,
+        note:
+          String(body.note ?? '')
+            .trim()
+            .slice(0, 300) || null,
       })
-      .select('id,task,mode,duration_seconds,completed_at')
+      .select()
       .single();
     if (error) throw error;
-    return NextResponse.json({ session: data }, { status: 201 });
+    return NextResponse.json({ log: data }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });
   }
@@ -74,13 +77,10 @@ export async function DELETE(request: Request) {
     const id = new URL(request.url).searchParams.get('id');
     if (!id)
       return NextResponse.json(
-        { message: '삭제할 기록을 선택해주세요.' },
+        { message: '기록을 선택해주세요.' },
         { status: 400 },
       );
-    const { error } = await supabase
-      .from('focus_sessions')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('sleep_logs').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error) {
