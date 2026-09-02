@@ -62,6 +62,8 @@ export function FilesWorkspace() {
           문서와 이미지를 안전한 개인 공간에 보관하세요.
           <br />
           파일당 최대 50MB까지 업로드할 수 있습니다.
+          <br />
+          선택하면 바로 업로드됩니다.
         </p>
         <input
           ref={inputRef}
@@ -77,7 +79,7 @@ export function FilesWorkspace() {
           onClick={() => inputRef.current?.click()}
           type="button"
         >
-          <Upload size={17} /> {busy ? '업로드 중…' : '파일 선택'}
+          <Upload size={17} /> {busy ? '업로드 중…' : '파일 선택 · 바로 업로드'}
         </button>
         {message && (
           <output

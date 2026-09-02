@@ -18,6 +18,13 @@ const dateKey = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localInput = (date: Date) =>
   `${dateKey(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+const qualityLabels: Record<string, string> = {
+  '1': '매우 아쉬움',
+  '2': '아쉬움',
+  '3': '보통',
+  '4': '좋음',
+  '5': '아주 좋음',
+};
 
 export function MorningWorkspace() {
   const routines = useApi<{ routines: Routine[]; checks: CheckRow[] }>(
@@ -181,6 +188,9 @@ export function MorningWorkspace() {
             }}
           />
         </div>
+        <p className="routine-reset-note">
+          완료 체크는 매일 자정 새로 시작하며, 지난 기록은 그대로 보관됩니다.
+        </p>
         <form className="inline-form" onSubmit={addRoutine}>
           <input
             aria-label="새 루틴"
@@ -269,11 +279,11 @@ export function MorningWorkspace() {
               onChange={(event) => setQuality(event.target.value)}
               value={quality}
             >
-              <option value="1">1 · 매우 아쉬움</option>
-              <option value="2">2 · 아쉬움</option>
-              <option value="3">3 · 보통</option>
-              <option value="4">4 · 좋음</option>
-              <option value="5">5 · 아주 좋음</option>
+              <option value="1">매우 아쉬움</option>
+              <option value="2">아쉬움</option>
+              <option value="3">보통</option>
+              <option value="4">좋음</option>
+              <option value="5">아주 좋음</option>
             </select>
           </label>
           <label>
@@ -322,7 +332,10 @@ export function MorningWorkspace() {
                       day: 'numeric',
                       weekday: 'short',
                     }).format(new Date(item.woke_at))}{' '}
-                    · 만족도 {item.quality ?? '—'}/5
+                    · 만족도{' '}
+                    {item.quality
+                      ? qualityLabels[String(item.quality)]
+                      : '기록 없음'}
                   </span>
                   {item.note && <small>{item.note}</small>}
                 </div>

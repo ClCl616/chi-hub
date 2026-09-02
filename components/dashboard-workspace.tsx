@@ -88,7 +88,7 @@ export function DashboardWorkspace() {
           </p>
         </div>
         <a className="primary-button" href="/notes">
-          <span>빠른 기록</span>
+          <span>메모 작성</span>
           <ArrowUpRight size={17} />
         </a>
       </div>
@@ -110,7 +110,11 @@ export function DashboardWorkspace() {
             <p>
               {todayFocus.length
                 ? `${todayFocus.length}개의 세션을 완료했어요.`
-                : '첫 집중을 시작해보세요.'}
+                : (focus.data?.sessions ?? []).some(
+                      (item) => dateKey(new Date(item.completed_at)) === today,
+                    )
+                  ? '오늘은 휴식 세션을 완료했어요.'
+                  : '첫 집중을 시작해보세요.'}
             </p>
           </div>
           <a className="timer-button" href="/focus">

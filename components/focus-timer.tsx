@@ -37,6 +37,7 @@ export function FocusTimer() {
   const [syncState, setSyncState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
+  const [completion, setCompletion] = useState<Mode | null>(null);
   const endAt = useRef<number | null>(null);
   const savedEnd = useRef<number | null>(null);
   const saveSession = async (
@@ -83,6 +84,7 @@ export function FocusTimer() {
       ) {
         savedEnd.current = saved.endAt;
         localStorage.removeItem(storageKey);
+        setCompletion(saved.mode);
         void saveSession({
           task: saved.task,
           mode: saved.mode,
@@ -105,6 +107,7 @@ export function FocusTimer() {
         localStorage.removeItem(storageKey);
         if (savedEnd.current !== completedEnd) {
           savedEnd.current = completedEnd;
+          setCompletion(mode);
           void saveSession();
           if ('Notification' in window && Notification.permission === 'granted')
             new Notification('CHI.HUB', {
@@ -141,10 +144,12 @@ export function FocusTimer() {
   );
   const progress = 1 - seconds / (duration * 60);
   const today = new Date();
-  const todaySessions = (history.data?.sessions ?? []).filter(
+  const allTodaySessions = (history.data?.sessions ?? []).filter(
     (item) =>
-      item.mode === 'focus' &&
       new Date(item.completed_at).toDateString() === today.toDateString(),
+  );
+  const todaySessions = allTodaySessions.filter(
+    (item) => item.mode === 'focus',
   );
   const todayMinutes = Math.round(
     todaySessions.reduce((sum, item) => sum + item.duration_seconds, 0) / 60,
@@ -280,8 +285,8 @@ export function FocusTimer() {
         <aside className="focus-summary">
           <div>
             <p className="card-label">TODAY</p>
-            <strong>{todaySessions.length}</strong>
-            <span>{todayMinutes}분 집중</span>
+            <strong>{allTodaySessions.length}</strong>
+            <span>완료 · 집중 {todayMinutes}분</span>
           </div>
           <div className="focus-guide">
             <CheckCircle2 size={19} />
@@ -290,9 +295,7 @@ export function FocusTimer() {
               <span>알림을 끄고 선택한 일에만 집중해보세요.</span>
             </p>
           </div>
-          <output className={`sync-note ${syncState}`}>
-            {syncText}
-          </output>
+          <output className={`sync-note ${syncState}`}>{syncText}</output>
         </aside>
       </section>
       <section className="workspace-card focus-history">
@@ -343,6 +346,30 @@ export function FocusTimer() {
             <DataNotice empty="완료한 세션이 여기에 쌓입니다." />
           )}
       </section>
+      {completion && (
+        <div className="completion-overlay" role="presentation">
+          <dialog
+            aria-describedby="completion-description"
+            aria-labelledby="completion-title"
+            className="completion-card"
+            open
+          >
+            <CheckCircle2 size={34} />
+            <p className="card-label">SESSION COMPLETE</p>
+            <h2 id="completion-title">
+              {completion === 'focus' ? '집중 완료!' : '휴식 완료!'}
+            </h2>
+            <p id="completion-description">
+              {completion === 'focus'
+                ? '오늘의 집중 기록에 안전하게 저장했어요.'
+                : '충분히 쉬었어요. 다음 집중을 준비해볼까요?'}
+            </p>
+            <button onClick={() => setCompletion(null)} type="button">
+              확인
+            </button>
+          </dialog>
+        </div>
+      )}
     </>
   );
 }

@@ -48,8 +48,10 @@ export async function POST(request: Request) {
         { message: '파일은 50MB 이하만 업로드할 수 있습니다.' },
         { status: 400 },
       );
+    // Keep storage object keys ASCII-only while preserving the original
+    // filename in the database for display and downloads.
     const safeName =
-      file.name.replace(/[^\p{L}\p{N}._-]+/gu, '-').slice(-120) || 'file';
+      file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-120) || 'file';
     const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
     const { error: uploadError } = await supabase.storage
       .from('private-files')
