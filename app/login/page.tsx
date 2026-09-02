@@ -1,12 +1,11 @@
-import Link from 'next/link';
 import { LoginForm } from '@/components/login-form';
 export default function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-card auth-card">
-        <Link className="public-brand" href="/">
+        <a className="public-brand" href="/">
           <span className="brand-mark">C</span> CHI.HUB
-        </Link>
+        </a>
         <div className="auth-intro">
           <p className="eyebrow">PRIVATE SPACE</p>
           <h1>반가워요.</h1>

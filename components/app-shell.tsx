@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BookOpen,
@@ -60,36 +59,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/" aria-label="CHI.HUB 홈">
+        <a className="brand" href="/" aria-label="CHI.HUB 홈">
           <span className="brand-mark">C</span>
           <span>
             CHI.HUB<small>personal operating system</small>
           </span>
-        </Link>
+        </a>
         <nav className="side-nav" aria-label="주 메뉴">
           <p>MY SPACE</p>
           {navigation.map(({ href, label, icon: Icon }) => (
-            <Link
+            <a
               className={pathname === href ? 'active' : ''}
               href={href}
               key={href}
             >
               <Icon size={19} />
               <span>{label}</span>
-            </Link>
+            </a>
           ))}
           <p>PUBLIC</p>
-          <Link
+          <a
             className={pathname === '/portfolio' ? 'active' : ''}
             href="/portfolio"
           >
             <BriefcaseBusiness size={19} />
             <span>포트폴리오</span>
-          </Link>
-          <Link href="/chi-log">
+          </a>
+          <a href="/chi-log">
             <BookOpen size={19} />
             <span>CHI.LOG</span>
-          </Link>
+          </a>
         </nav>
         <div className="sidebar-footer">
           {authState === 'ready' ? (
@@ -97,16 +96,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <LogOut size={18} /> 로그아웃
             </button>
           ) : (
-            <Link href="/login">
+            <a href="/login">
               <LogIn size={18} /> 로그인
-            </Link>
+            </a>
           )}
         </div>
       </aside>
       <div className="mobile-header">
-        <Link className="mobile-brand" href="/">
+        <a className="mobile-brand" href="/">
           <span className="brand-mark">C</span> CHI.HUB
-        </Link>
+        </a>
         <Sheet>
           <SheetTrigger
             className="mobile-menu-trigger"
@@ -129,7 +128,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <SheetClose
                   key={href}
                   render={
-                    <Link
+                    <a
+                      aria-label={label}
                       className={pathname === href ? 'active' : ''}
                       href={href}
                     />
@@ -146,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <LogOut size={18} /> 로그아웃
                 </button>
               ) : (
-                <SheetClose render={<Link href="/login" />}>
+                <SheetClose render={<a aria-label="로그인" href="/login" />}>
                   <LogIn size={18} /> 로그인
                 </SheetClose>
               )}
@@ -156,9 +156,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <main className="main-content">
         {authState === 'checking' ? (
-          <output className="auth-check">
-            내 공간을 불러오는 중…
-          </output>
+          <output className="auth-check">내 공간을 불러오는 중…</output>
         ) : (
           <>
             {authState === 'offline' && (
@@ -172,14 +170,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <nav className="bottom-nav" aria-label="모바일 주 메뉴">
         {navigation.slice(0, 5).map(({ href, label, icon: Icon }) => (
-          <Link
+          <a
             className={pathname === href ? 'active' : ''}
             href={href}
             key={href}
           >
             <Icon size={20} />
             <span>{label}</span>
-          </Link>
+          </a>
         ))}
       </nav>
     </div>

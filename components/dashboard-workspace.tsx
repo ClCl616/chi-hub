@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowUpRight, Check, Dumbbell, Moon, TimerReset } from 'lucide-react';
 import { useApi } from '@/hooks/use-api';
 
@@ -66,8 +65,12 @@ export function DashboardWorkspace() {
     };
   });
   const max = Math.max(1, ...days.map((day) => day.value));
-  const hasError =
-    focus.error || routines.error || sleep.error || workouts.error;
+  const unavailableCount = [
+    focus.error,
+    routines.error,
+    sleep.error,
+    workouts.error,
+  ].filter(Boolean).length;
   return (
     <>
       <div className="page-heading">
@@ -79,19 +82,19 @@ export function DashboardWorkspace() {
               weekday: 'long',
             }).format(now)}
           </p>
-          <h1>오늘도, 나답게.</h1>
+          <h1>오늘의 기록</h1>
           <p className="page-description">
-            하루의 리듬을 한곳에서 가볍게 확인하세요.
+            집중과 루틴, 최근 흐름을 확인하세요.
           </p>
         </div>
-        <Link className="primary-button" href="/notes">
+        <a className="primary-button" href="/notes">
           <span>빠른 기록</span>
           <ArrowUpRight size={17} />
-        </Link>
+        </a>
       </div>
-      {hasError && (
+      {unavailableCount === 4 && (
         <output className="service-banner">
-          일부 기록을 불러오지 못했습니다. 연결 상태를 확인해주세요.
+          기록 서비스를 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.
         </output>
       )}
       <section className="dashboard-grid" aria-label="오늘의 요약">
@@ -99,20 +102,22 @@ export function DashboardWorkspace() {
           <div className="card-label">
             <TimerReset size={17} /> 오늘의 집중
           </div>
-          <div className="timer-value">
-            {focusMinutes}
-            <small>분</small>
+          <div className="focus-card-body">
+            <div className="timer-value">
+              {focusMinutes}
+              <small>분</small>
+            </div>
+            <p>
+              {todayFocus.length
+                ? `${todayFocus.length}개의 세션을 완료했어요.`
+                : '첫 집중을 시작해보세요.'}
+            </p>
           </div>
-          <p>
-            {todayFocus.length
-              ? `${todayFocus.length}개의 세션을 완료했어요.`
-              : '첫 번째 집중 세션을 시작해볼까요?'}
-          </p>
-          <Link className="timer-button" href="/focus">
+          <a className="timer-button" href="/focus">
             {todayFocus.length ? '기록 보기' : '집중 시작'}
-          </Link>
+          </a>
         </article>
-        <Link className="summary-card" href="/morning">
+        <a className="summary-card" href="/morning">
           <div className="summary-icon">
             <Moon size={20} />
           </div>
@@ -125,8 +130,8 @@ export function DashboardWorkspace() {
               {sleepHours ? '수면 기록에서 자세히 보기' : '아직 기록이 없어요'}
             </small>
           </div>
-        </Link>
-        <Link className="summary-card" href="/morning">
+        </a>
+        <a className="summary-card" href="/morning">
           <div className="summary-icon">
             <Check size={20} />
           </div>
@@ -141,16 +146,16 @@ export function DashboardWorkspace() {
                 : '첫 루틴을 만들어보세요'}
             </small>
           </div>
-        </Link>
+        </a>
         <article className="week-card">
           <div className="card-header">
             <div>
               <p className="card-label">이번 주 흐름</p>
               <h2>기록이 쌓이는 중</h2>
             </div>
-            <Link href="/workouts">
+            <a href="/workouts">
               <Dumbbell size={15} /> 운동 기록
-            </Link>
+            </a>
           </div>
           <div className="week-chart" aria-label="최근 7일 활동 기록">
             {days.map((day, index) => (

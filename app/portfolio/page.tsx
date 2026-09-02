@@ -1,2 +1,37 @@
-import Link from 'next/link'; import { ArrowLeft, ArrowUpRight } from 'lucide-react';
-export default function Page(){return <main className="public-page"><nav><Link className="public-brand" href="/"><span className="brand-mark">C</span> CHI.HUB</Link><Link href="/login">OWNER LOGIN</Link></nav><section className="portfolio-hero"><p className="eyebrow">PUBLIC PORTFOLIO · COMING SOON</p><h1>기록이 곧<br/><em>나의 방향</em>이 됩니다.</h1><p>CHI.LOG의 이야기와 작업을 새롭게 담을 공개 포트폴리오를 준비하고 있습니다.</p><div><Link href="/"><ArrowLeft size={16}/> 허브로 돌아가기</Link><a href="#archive">아카이브 미리보기 <ArrowUpRight size={16}/></a></div></section><section className="portfolio-strip" id="archive"><span>THOUGHTS</span><span>PROJECTS</span><span>ARCHIVE</span></section></main>}
+import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+export default function Page() {
+  return (
+    <main className="public-page">
+      <nav>
+        <a className="public-brand" href="/">
+          <span className="brand-mark">C</span> CHI.HUB
+        </a>
+        <a href="/login">OWNER LOGIN</a>
+      </nav>
+      <section className="portfolio-hero">
+        <p className="eyebrow">PUBLIC PORTFOLIO · COMING SOON</p>
+        <h1>
+          기록이 곧<br />
+          <em>나의 방향</em>이 됩니다.
+        </h1>
+        <p>
+          CHI.LOG의 이야기와 작업을 새롭게 담을 공개 포트폴리오를 준비하고
+          있습니다.
+        </p>
+        <div>
+          <a href="/">
+            <ArrowLeft size={16} /> 허브로 돌아가기
+          </a>
+          <a href="#archive">
+            아카이브 미리보기 <ArrowUpRight size={16} />
+          </a>
+        </div>
+      </section>
+      <section className="portfolio-strip" id="archive">
+        <span>THOUGHTS</span>
+        <span>PROJECTS</span>
+        <span>ARCHIVE</span>
+      </section>
+    </main>
+  );
+}
