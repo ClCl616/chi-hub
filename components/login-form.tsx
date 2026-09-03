@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { LoaderCircle, LogIn, UserPlus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 type Mode = 'login' | 'signup';
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -12,6 +11,11 @@ export function LoginForm() {
     type: 'error' | 'success';
     text: string;
   } | null>(null);
+  const displayedMessage =
+    message ??
+    (searchParams.get('error') === 'google-config'
+      ? { type: 'error' as const, text: 'Google 로그인 설정을 확인해주세요.' }
+      : null);
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
@@ -49,31 +53,13 @@ export function LoginForm() {
     window.location.href =
       returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
   }
-  async function signInWithGoogle() {
+  function signInWithGoogle() {
     setPending(true);
     setMessage(null);
     const returnTo = searchParams.get('returnTo');
     const next =
       returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      setPending(false);
-      setMessage({
-        type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Google 로그인을 시작하지 못했습니다.',
-      });
-    }
+    window.location.assign(`/api/auth/google?next=${encodeURIComponent(next)}`);
   }
   return (
     <div className="auth-form-wrap">
@@ -125,9 +111,9 @@ export function LoginForm() {
             type="password"
           />
         </label>
-        {message && (
-          <output className={`auth-message ${message.type}`}>
-            {message.text}
+        {displayedMessage && (
+          <output className={`auth-message ${displayedMessage.type}`}>
+            {displayedMessage.text}
           </output>
         )}
         <button className="auth-submit" disabled={pending} type="submit">
@@ -147,7 +133,7 @@ export function LoginForm() {
       <button
         className="google-auth-button"
         disabled={pending}
-        onClick={() => void signInWithGoogle()}
+        onClick={signInWithGoogle}
         type="button"
       >
         <span aria-hidden="true">G</span> Google로 계속하기
