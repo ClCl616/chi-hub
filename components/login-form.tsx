@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { LoaderCircle, LogIn, UserPlus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 type Mode = 'login' | 'signup';
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -47,6 +48,32 @@ export function LoginForm() {
     const returnTo = searchParams.get('returnTo');
     window.location.href =
       returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+  }
+  async function signInWithGoogle() {
+    setPending(true);
+    setMessage(null);
+    const returnTo = searchParams.get('returnTo');
+    const next =
+      returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      setPending(false);
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Google 로그인을 시작하지 못했습니다.',
+      });
+    }
   }
   return (
     <div className="auth-form-wrap">
@@ -114,6 +141,17 @@ export function LoginForm() {
           {pending ? '처리 중' : mode === 'login' ? '로그인' : '계정 만들기'}
         </button>
       </form>
+      <div className="auth-divider" aria-hidden="true">
+        <span>또는</span>
+      </div>
+      <button
+        className="google-auth-button"
+        disabled={pending}
+        onClick={() => void signInWithGoogle()}
+        type="button"
+      >
+        <span aria-hidden="true">G</span> Google로 계속하기
+      </button>
     </div>
   );
 }
