@@ -26,13 +26,24 @@ const modes: { id: Mode; label: string; minutes: number }[] = [
   { id: 'long', label: '긴 휴식', minutes: 15 },
 ];
 const storageKey = 'chi-hub-focus-timer-v2';
+const formatDuration = (value: number) =>
+  `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+const parseDuration = (value: string) => {
+  const match = value.trim().match(/^(\d{1,3}):(\d{2})$/);
+  if (!match) return null;
+  const seconds = Number(match[1]) * 60 + Number(match[2]);
+  return seconds >= 60 && seconds <= 14_400 && Number(match[2]) < 60
+    ? seconds
+    : null;
+};
 
 export function FocusTimer() {
   const history = useApi<{ sessions: Session[] }>('/api/focus-sessions');
   const [mode, setMode] = useState<Mode>('focus');
-  const [minutes, setMinutes] = useState(25);
-  const duration = minutes;
-  const [seconds, setSeconds] = useState(duration * 60);
+  const [durationSeconds, setDurationSeconds] = useState(25 * 60);
+  const [seconds, setSeconds] = useState(durationSeconds);
+  const [editingDuration, setEditingDuration] = useState(false);
+  const [durationDraft, setDurationDraft] = useState('25:00');
   const [running, setRunning] = useState(false);
   const [task, setTask] = useState('');
   const [syncState, setSyncState] = useState<
@@ -42,7 +53,7 @@ export function FocusTimer() {
   const endAt = useRef<number | null>(null);
   const savedEnd = useRef<number | null>(null);
   const saveSession = async (
-    payload = { task, mode, durationSeconds: duration * 60 },
+    payload = { task, mode, durationSeconds },
   ) => {
     setSyncState('saving');
     try {
@@ -70,7 +81,8 @@ export function FocusTimer() {
         remaining: number;
       };
       setMode(saved.mode);
-      setMinutes(Math.max(1, Math.min(240, Math.round(saved.durationSeconds / 60))));
+      setDurationSeconds(saved.durationSeconds);
+      setDurationDraft(formatDuration(saved.durationSeconds));
       setTask(saved.task);
       const left = saved.endAt
         ? Math.max(0, Math.ceil((saved.endAt - Date.now()) / 1000))
@@ -124,7 +136,7 @@ export function FocusTimer() {
     tick();
     const timer = window.setInterval(tick, 500);
     return () => window.clearInterval(timer);
-  }, [running, task, mode, duration]);
+  }, [running, task, mode, durationSeconds]);
   /* oxlint-enable react/react-compiler, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (running && endAt.current)
@@ -133,18 +145,14 @@ export function FocusTimer() {
         JSON.stringify({
           mode,
           task,
-          durationSeconds: duration * 60,
+          durationSeconds,
           endAt: endAt.current,
           remaining: seconds,
         }),
       );
-  }, [running, mode, task, duration, seconds]);
-  const time = useMemo(
-    () =>
-      `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`,
-    [seconds],
-  );
-  const progress = 1 - seconds / (duration * 60);
+  }, [running, mode, task, durationSeconds, seconds]);
+  const time = useMemo(() => formatDuration(seconds), [seconds]);
+  const progress = 1 - seconds / durationSeconds;
   const today = new Date();
   const allTodaySessions = (history.data?.sessions ?? []).filter(
     (item) =>
@@ -163,20 +171,26 @@ export function FocusTimer() {
     )
       return;
     setMode(next);
-    const minutes = modes.find((item) => item.id === next)?.minutes ?? 25;
-    setMinutes(minutes);
-    setSeconds(minutes * 60);
+    const nextSeconds = (modes.find((item) => item.id === next)?.minutes ?? 25) * 60;
+    setDurationSeconds(nextSeconds);
+    setDurationDraft(formatDuration(nextSeconds));
+    setSeconds(nextSeconds);
     setRunning(false);
     endAt.current = null;
     localStorage.removeItem(storageKey);
   }
-  function changeMinutes(value: string) {
-    const next = Math.max(1, Math.min(240, Number(value) || 1));
-    setMinutes(next);
-    if (!running) setSeconds(next * 60);
+  function saveDuration() {
+    const next = parseDuration(durationDraft);
+    if (!next) {
+      setDurationDraft(formatDuration(durationSeconds));
+    } else {
+      setDurationSeconds(next);
+      setSeconds(next);
+    }
+    setEditingDuration(false);
   }
   function toggle() {
-    if (seconds === 0) setSeconds(duration * 60);
+    if (seconds === 0) setSeconds(durationSeconds);
     if (running) {
       setRunning(false);
       const remaining = endAt.current
@@ -189,13 +203,13 @@ export function FocusTimer() {
         JSON.stringify({
           mode,
           task,
-          durationSeconds: duration * 60,
+          durationSeconds,
           endAt: null,
           remaining,
         }),
       );
     } else {
-      const remaining = seconds === 0 ? duration * 60 : seconds;
+      const remaining = seconds === 0 ? durationSeconds : seconds;
       endAt.current = Date.now() + remaining * 1000;
       setRunning(true);
       setSyncState('idle');
@@ -205,7 +219,7 @@ export function FocusTimer() {
   }
   function reset() {
     setRunning(false);
-    setSeconds(duration * 60);
+    setSeconds(durationSeconds);
     endAt.current = null;
     localStorage.removeItem(storageKey);
     setSyncState('idle');
@@ -245,19 +259,6 @@ export function FocusTimer() {
               </button>
             ))}
           </div>
-          <label className="duration-field">
-            <span>시간 설정</span>
-            <input
-              aria-label="타이머 시간(분)"
-              disabled={running}
-              max={240}
-              min={1}
-              onChange={(event) => changeMinutes(event.target.value)}
-              type="number"
-              value={minutes}
-            />
-            <small>분</small>
-          </label>
           <label className="task-field">
             <span>이번 세션에 집중할 일</span>
             <input
@@ -277,7 +278,35 @@ export function FocusTimer() {
           >
             <div>
               <span>{mode === 'focus' ? 'FOCUS' : 'BREAK'}</span>
-              <strong aria-live="polite">{time}</strong>
+              {editingDuration ? (
+                <input
+                  aria-label="타이머 시간"
+                  className="timer-duration-input"
+                  onBlur={saveDuration}
+                  onChange={(event) => setDurationDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                    if (event.key === 'Escape') {
+                      setDurationDraft(formatDuration(durationSeconds));
+                      setEditingDuration(false);
+                    }
+                  }}
+                  value={durationDraft}
+                />
+              ) : (
+                <button
+                  aria-label="타이머 시간 수정"
+                  className="timer-duration-button"
+                  disabled={running}
+                  onClick={() => {
+                    setDurationDraft(formatDuration(durationSeconds));
+                    setEditingDuration(true);
+                  }}
+                  type="button"
+                >
+                  {time}
+                </button>
+              )}
               <small>{task || '집중할 일을 입력하세요'}</small>
             </div>
           </div>
