@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { BedDouble, Check, Moon, Plus, Trash2 } from 'lucide-react';
+import { BedDouble, Check, Moon, Plus, Square, Trash2 } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
 
@@ -10,14 +10,12 @@ type CheckRow = { id: string; routine_id: string; checked_on: string };
 type SleepLog = {
   id: string;
   slept_at: string;
-  woke_at: string;
+  woke_at: string | null;
   quality: number | null;
   note: string | null;
 };
 const dateKey = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const localInput = (date: Date) =>
-  `${dateKey(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 const qualityLabels: Record<string, string> = {
   '1': '매우 아쉬움',
   '2': '아쉬움',
@@ -30,15 +28,10 @@ export function MorningWorkspace() {
   const routines = useApi<{ routines: Routine[]; checks: CheckRow[] }>(
     '/api/routines',
   );
-  const sleep = useApi<{ logs: SleepLog[] }>('/api/sleep-logs');
+  const sleep = useApi<{ logs: SleepLog[]; activeSleep: SleepLog | null }>('/api/sleep-logs');
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
-  const now = new Date();
-  const defaultWake = localInput(now);
-  const bed = new Date(now.getTime() - 8 * 60 * 60 * 1000);
-  const [sleptAt, setSleptAt] = useState(localInput(bed));
-  const [wokeAt, setWokeAt] = useState(defaultWake);
   const [quality, setQuality] = useState('3');
   const [note, setNote] = useState('');
   const today = dateKey();
@@ -50,13 +43,13 @@ export function MorningWorkspace() {
   const active = (routines.data?.routines ?? []).filter((item) => item.active);
   const done = active.filter((item) => checked.has(item.id)).length;
   const sleepAverage = useMemo(() => {
-    const logs = sleep.data?.logs ?? [];
+    const logs = (sleep.data?.logs ?? []).filter((item) => item.woke_at);
     if (!logs.length) return 0;
     return (
       logs.reduce(
         (sum, item) =>
           sum +
-          (new Date(item.woke_at).getTime() -
+          (new Date(item.woke_at!).getTime() -
             new Date(item.slept_at).getTime()) /
             3_600_000,
         0,
@@ -77,10 +70,24 @@ export function MorningWorkspace() {
       });
       setTitle('');
       await routines.refresh();
+      setMessage('루틴을 추가했어요. 오늘부터 바로 체크할 수 있어요.');
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : '저장하지 못했습니다.',
       );
+    } finally {
+      setBusy('');
+    }
+  }
+  async function addSuggestedRoutine(suggestedTitle: string) {
+    setBusy('routine');
+    setMessage('');
+    try {
+      await apiRequest('/api/routines', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: suggestedTitle }) });
+      await routines.refresh();
+      setMessage(`“${suggestedTitle}” 루틴을 추가했어요.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '저장하지 못했습니다.');
     } finally {
       setBusy('');
     }
@@ -118,27 +125,37 @@ export function MorningWorkspace() {
       setBusy('');
     }
   }
-  async function addSleep(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function startSleep() {
     setBusy('sleep');
     setMessage('');
     try {
       await apiRequest('/api/sleep-logs', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          sleptAt,
-          wokeAt,
-          quality: Number(quality),
-          note,
-        }),
+        body: JSON.stringify({}),
       });
-      setNote('');
       await sleep.refresh();
+      setMessage('수면을 시작했어요. 일어나면 여기서 종료해주세요.');
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : '저장하지 못했습니다.',
       );
+    } finally {
+      setBusy('');
+    }
+  }
+  async function stopSleep() {
+    const activeSleep = sleep.data?.activeSleep;
+    if (!activeSleep) return;
+    setBusy('sleep');
+    setMessage('');
+    try {
+      await apiRequest('/api/sleep-logs', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: activeSleep.id, quality: Number(quality), note }) });
+      setNote('');
+      await sleep.refresh();
+      setMessage('수면 시간을 기록했어요.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '저장하지 못했습니다.');
     } finally {
       setBusy('');
     }
@@ -181,13 +198,13 @@ export function MorningWorkspace() {
             {active.length ? Math.round((done / active.length) * 100) : 0}%
           </span>
         </div>
-        <div className="progress-track">
+        {!!active.length && <div className="progress-track">
           <span
             style={{
               width: `${active.length ? (done / active.length) * 100 : 0}%`,
             }}
           />
-        </div>
+        </div>}
         <p className="routine-reset-note">
           완료 체크는 매일 자정 새로 시작하며, 지난 기록은 그대로 보관됩니다.
         </p>
@@ -203,6 +220,14 @@ export function MorningWorkspace() {
             <Plus size={17} /> 추가
           </button>
         </form>
+        {!active.length && (
+          <div className="routine-suggestions" aria-label="추천 루틴">
+            <span>빠르게 시작하기</span>
+            {['물 한 잔', '5분 스트레칭', '오늘의 우선순위'].map((suggestion) => (
+              <button disabled={busy === 'routine'} key={suggestion} onClick={() => addSuggestedRoutine(suggestion)} type="button">+ {suggestion}</button>
+            ))}
+          </div>
+        )}
         <DataNotice
           loading={routines.loading}
           error={routines.error}
@@ -252,27 +277,16 @@ export function MorningWorkspace() {
             </h2>
           </div>
         </div>
-        <form className="stack-form" onSubmit={addSleep}>
-          <div className="field-row">
-            <label>
-              <span>취침</span>
-              <input
-                onChange={(event) => setSleptAt(event.target.value)}
-                required
-                type="datetime-local"
-                value={sleptAt}
-              />
-            </label>
-            <label>
-              <span>기상</span>
-              <input
-                onChange={(event) => setWokeAt(event.target.value)}
-                required
-                type="datetime-local"
-                value={wokeAt}
-              />
-            </label>
-          </div>
+        <div className="stack-form sleep-timer-form">
+          {sleep.data?.activeSleep ? (
+            <div className="sleep-running">
+              <span>수면 진행 중</span>
+              <strong>{new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' }).format(new Date(sleep.data.activeSleep.slept_at))}에 시작했어요</strong>
+              <small>일어나면 종료를 눌러 수면 시간을 자동 기록하세요.</small>
+            </div>
+          ) : (
+            <p className="sleep-intro">잠들기 직전에 시작을 누르세요. 기상 시각은 종료할 때 자동으로 기록됩니다.</p>
+          )}
           <label>
             <span>수면 만족도</span>
             <select
@@ -298,11 +312,12 @@ export function MorningWorkspace() {
           <button
             className="submit-button"
             disabled={busy === 'sleep'}
-            type="submit"
+            onClick={() => (sleep.data?.activeSleep ? void stopSleep() : void startSleep())}
+            type="button"
           >
-            <BedDouble size={17} /> 수면 기록 저장
+            {sleep.data?.activeSleep ? <><Square size={16} /> {busy === 'sleep' ? '기록 중…' : '수면 종료하기'}</> : <><BedDouble size={17} /> {busy === 'sleep' ? '시작 중…' : '수면 시작하기'}</>}
           </button>
-        </form>
+        </div>
       </section>
       <section className="workspace-card history-card">
         <div className="section-title">
@@ -317,9 +332,9 @@ export function MorningWorkspace() {
           onRetry={sleep.refresh}
         />
         <div className="record-list">
-          {(sleep.data?.logs ?? []).slice(0, 7).map((item) => {
+          {(sleep.data?.logs ?? []).filter((item) => item.woke_at).slice(0, 7).map((item) => {
             const hours =
-              (new Date(item.woke_at).getTime() -
+              (new Date(item.woke_at!).getTime() -
                 new Date(item.slept_at).getTime()) /
               3_600_000;
             return (
@@ -331,7 +346,7 @@ export function MorningWorkspace() {
                       month: 'short',
                       day: 'numeric',
                       weekday: 'short',
-                    }).format(new Date(item.woke_at))}{' '}
+                    }).format(new Date(item.woke_at!))}{' '}
                     · 만족도{' '}
                     {item.quality
                       ? qualityLabels[String(item.quality)]

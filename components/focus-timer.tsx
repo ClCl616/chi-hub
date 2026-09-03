@@ -30,7 +30,8 @@ const storageKey = 'chi-hub-focus-timer-v2';
 export function FocusTimer() {
   const history = useApi<{ sessions: Session[] }>('/api/focus-sessions');
   const [mode, setMode] = useState<Mode>('focus');
-  const duration = modes.find((item) => item.id === mode)?.minutes ?? 25;
+  const [minutes, setMinutes] = useState(25);
+  const duration = minutes;
   const [seconds, setSeconds] = useState(duration * 60);
   const [running, setRunning] = useState(false);
   const [task, setTask] = useState('');
@@ -69,6 +70,7 @@ export function FocusTimer() {
         remaining: number;
       };
       setMode(saved.mode);
+      setMinutes(Math.max(1, Math.min(240, Math.round(saved.durationSeconds / 60))));
       setTask(saved.task);
       const left = saved.endAt
         ? Math.max(0, Math.ceil((saved.endAt - Date.now()) / 1000))
@@ -162,10 +164,16 @@ export function FocusTimer() {
       return;
     setMode(next);
     const minutes = modes.find((item) => item.id === next)?.minutes ?? 25;
+    setMinutes(minutes);
     setSeconds(minutes * 60);
     setRunning(false);
     endAt.current = null;
     localStorage.removeItem(storageKey);
+  }
+  function changeMinutes(value: string) {
+    const next = Math.max(1, Math.min(240, Number(value) || 1));
+    setMinutes(next);
+    if (!running) setSeconds(next * 60);
   }
   function toggle() {
     if (seconds === 0) setSeconds(duration * 60);
@@ -237,6 +245,19 @@ export function FocusTimer() {
               </button>
             ))}
           </div>
+          <label className="duration-field">
+            <span>시간 설정</span>
+            <input
+              aria-label="타이머 시간(분)"
+              disabled={running}
+              max={240}
+              min={1}
+              onChange={(event) => changeMinutes(event.target.value)}
+              type="number"
+              value={minutes}
+            />
+            <small>분</small>
+          </label>
           <label className="task-field">
             <span>이번 세션에 집중할 일</span>
             <input

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, File, FileArchive, Trash2, Upload } from 'lucide-react';
+import { Download, File, FileArchive, FolderOpen, Trash2, Upload } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
 type StoredFile = {
@@ -56,15 +56,13 @@ export function FilesWorkspace() {
   return (
     <div className="files-layout">
       <section className="upload-card">
-        <FileArchive size={30} />
-        <h2>파일 추가</h2>
+        <FileArchive size={26} />
+        <div>
+        <h2>내 드라이브에 업로드</h2>
         <p>
-          문서와 이미지를 안전한 개인 공간에 보관하세요.
-          <br />
-          파일당 최대 50MB까지 업로드할 수 있습니다.
-          <br />
-          선택하면 바로 업로드됩니다.
+          문서, 이미지, 압축 파일을 보관하세요. 파일당 최대 500MB까지 지원합니다.
         </p>
+        </div>
         <input
           ref={inputRef}
           hidden
@@ -79,7 +77,7 @@ export function FilesWorkspace() {
           onClick={() => inputRef.current?.click()}
           type="button"
         >
-          <Upload size={17} /> {busy ? '업로드 중…' : '파일 선택 · 바로 업로드'}
+          <Upload size={17} /> {busy ? '업로드 중…' : '파일 업로드'}
         </button>
         {message && (
           <output
@@ -94,8 +92,8 @@ export function FilesWorkspace() {
       <section className="workspace-card file-list-card">
         <div className="section-title">
           <div>
-            <p className="card-label">PRIVATE STORAGE</p>
-            <h2>내 파일</h2>
+            <p className="card-label"><FolderOpen size={15} /> MY DRIVE</p>
+            <h2>내 드라이브</h2>
           </div>
           <span>{records.data?.files.length ?? 0}개</span>
         </div>

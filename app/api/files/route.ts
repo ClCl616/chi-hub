@@ -43,9 +43,9 @@ export async function POST(request: Request) {
         { message: '파일을 선택해주세요.' },
         { status: 400 },
       );
-    if (file.size > 50 * 1024 * 1024)
+    if (file.size > 500 * 1024 * 1024)
       return NextResponse.json(
-        { message: '파일은 50MB 이하만 업로드할 수 있습니다.' },
+        { message: '파일은 500MB 이하만 업로드할 수 있습니다.' },
         { status: 400 },
       );
     // Keep storage object keys ASCII-only while preserving the original
