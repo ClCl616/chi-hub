@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
-  BookOpen,
-  BriefcaseBusiness,
   Dumbbell,
   FileArchive,
   LayoutDashboard,
@@ -18,7 +16,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetDescription,
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
@@ -47,11 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       })
       .catch(() => setAuthState('offline'));
   }, [pathname]);
-  const mobileLinks = [
-    ...navigation,
-    { href: '/portfolio', label: '포트폴리오', icon: BriefcaseBusiness },
-    { href: '/chi-log', label: 'CHI.LOG', icon: BookOpen },
-  ];
+  const mobileLinks = navigation;
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     window.location.href = '/login';
@@ -77,18 +70,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span>{label}</span>
             </a>
           ))}
-          <p>PUBLIC</p>
-          <a
-            className={pathname === '/portfolio' ? 'active' : ''}
-            href="/portfolio"
-          >
-            <BriefcaseBusiness size={19} />
-            <span>포트폴리오</span>
-          </a>
-          <a href="/chi-log">
-            <BookOpen size={19} />
-            <span>CHI.LOG</span>
-          </a>
         </nav>
         <div className="sidebar-footer">
           {authState === 'ready' ? (
@@ -120,9 +101,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 CHI.HUB<small>ALL SPACES</small>
               </span>
             </SheetTitle>
-            <SheetDescription className="mobile-menu-description">
-              기록하고 싶은 공간으로 이동하세요.
-            </SheetDescription>
             <nav className="mobile-menu-nav" aria-label="전체 메뉴">
               {mobileLinks.map(({ href, label, icon: Icon }) => (
                 <SheetClose

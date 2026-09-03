@@ -4,13 +4,11 @@ import { AppShell } from '@/components/app-shell';
 export function FeatureLayout({
   eyebrow,
   title,
-  description,
   action,
   children,
 }: {
   eyebrow: string;
   title: string;
-  description: string;
   action?: ReactNode;
   children: ReactNode;
 }) {
@@ -21,7 +19,6 @@ export function FeatureLayout({
           <div>
             <p className="eyebrow">{eyebrow}</p>
             <h1>{title}</h1>
-            <p>{description}</p>
           </div>
           {action}
         </header>

@@ -83,9 +83,6 @@ export function DashboardWorkspace() {
             }).format(now)}
           </p>
           <h1>오늘의 기록</h1>
-          <p className="page-description">
-            집중과 루틴, 최근 흐름을 확인하세요.
-          </p>
         </div>
         <a className="primary-button" href="/notes">
           <span>메모 작성</span>

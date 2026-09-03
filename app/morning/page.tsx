@@ -5,7 +5,6 @@ export default function Page() {
     <FeatureLayout
       eyebrow="MIRACLE MORNING & SLEEP"
       title="하루의 리듬"
-      description="오늘의 루틴을 체크하고 수면 흐름을 함께 관리하세요."
     >
       <MorningWorkspace />
     </FeatureLayout>
