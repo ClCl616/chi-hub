@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, File, FileArchive, FolderOpen, Trash2, Upload } from 'lucide-react';
+import { Download, File, FileArchive, FileImage, FolderOpen, Grid2X2, List, Trash2, Upload } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
 type StoredFile = {
@@ -22,23 +22,13 @@ export function FilesWorkspace() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  async function upload(file: File) {
+  const [uploads, setUploads] = useState<Array<{name:string;status:string}>>([]);
+  const [view, setView] = useState<'list'|'grid'>('list');
+  async function upload(files: File[]) {
     setBusy(true);
-    setMessage('업로드 중…');
-    const form = new FormData();
-    form.append('file', file);
-    try {
-      await apiRequest('/api/files', { method: 'POST', body: form });
-      await records.refresh();
-      setMessage('업로드 완료');
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : '업로드하지 못했습니다.',
-      );
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
+    setUploads(files.map(file=>({name:file.name,status:'업로드 중'})));
+    for (const file of files) { const form = new FormData(); form.append('file', file); try { await apiRequest('/api/files',{method:'POST',body:form}); setUploads(items=>items.map(item=>item.name===file.name?{...item,status:'완료'}:item)); } catch { setUploads(items=>items.map(item=>item.name===file.name?{...item,status:'실패'}:item)); } }
+    await records.refresh(); setBusy(false); if(inputRef.current)inputRef.current.value='';
   }
   async function remove(id: string) {
     if (!window.confirm('이 파일을 영구 삭제할까요?')) return;
@@ -66,9 +56,10 @@ export function FilesWorkspace() {
         <input
           ref={inputRef}
           hidden
+          multiple
           onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void upload(file);
+            const files = Array.from(event.target.files ?? []);
+            if (files.length) void upload(files);
           }}
           type="file"
         />
@@ -88,6 +79,7 @@ export function FilesWorkspace() {
             {message}
           </output>
         )}
+        {uploads.map(item=><output className={item.status==='실패'?'error':''} key={item.name}>{item.name} · {item.status}</output>)}
       </section>
       <section className="workspace-card file-list-card">
         <div className="section-title">
@@ -95,19 +87,17 @@ export function FilesWorkspace() {
             <p className="card-label"><FolderOpen size={15} /> MY DRIVE</p>
             <h2>내 드라이브</h2>
           </div>
-          <span>{records.data?.files.length ?? 0}개</span>
+          <div className="file-view-actions"><span>{records.data?.files.length ?? 0}개</span><button className={view==='list'?'active':''} onClick={()=>setView('list')} type="button" aria-label="목록 보기"><List size={15}/></button><button className={view==='grid'?'active':''} onClick={()=>setView('grid')} type="button" aria-label="격자 보기"><Grid2X2 size={15}/></button></div>
         </div>
         <DataNotice
           loading={records.loading}
           error={records.error}
           onRetry={records.refresh}
         />
-        <div className="file-list">
+        <div className={view==='grid'?'file-grid':'file-list'}>
           {(records.data?.files ?? []).map((item) => (
             <article className="file-row" key={item.id}>
-              <div className="file-icon">
-                <File size={19} />
-              </div>
+              {item.mime_type?.startsWith('image/') && item.url ? <img className="file-preview" src={item.url} alt=""/> : <div className="file-icon">{item.mime_type?.startsWith('image/')?<FileImage size={19}/>:<File size={19}/>}</div>}
               <div>
                 <strong>{item.name}</strong>
                 <span>
