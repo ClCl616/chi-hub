@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Dumbbell,
@@ -10,6 +10,8 @@ import {
   Menu,
   MoonStar,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   TimerReset,
 } from 'lucide-react';
 import {
@@ -22,14 +24,31 @@ import {
 
 const navigation = [
   { href: '/', label: '홈', icon: LayoutDashboard },
-  { href: '/focus', label: '집중', icon: TimerReset },
+  { href: '/focus', label: '타이머', icon: TimerReset },
   { href: '/morning', label: '루틴', icon: MoonStar },
   { href: '/workouts', label: '운동', icon: Dumbbell },
   { href: '/notes', label: '메모', icon: NotebookPen },
   { href: '/files', label: '파일', icon: FileArchive },
 ];
+const sidebarStorageKey = 'chi-hub-sidebar';
+const sidebarChangeEvent = 'chi-hub-sidebar-change';
+function subscribeToSidebar(onStoreChange: () => void) {
+  window.addEventListener(sidebarChangeEvent, onStoreChange);
+  return () => window.removeEventListener(sidebarChangeEvent, onStoreChange);
+}
+function getSidebarSnapshot() {
+  return window.localStorage.getItem(sidebarStorageKey) !== 'collapsed';
+}
+function getServerSidebarSnapshot() {
+  return true;
+}
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const sidebarExpanded = useSyncExternalStore(
+    subscribeToSidebar,
+    getSidebarSnapshot,
+    getServerSidebarSnapshot,
+  );
   const [authState, setAuthState] = useState<'checking' | 'ready' | 'offline'>(
     'checking',
   );
@@ -45,21 +64,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => setAuthState('offline'));
   }, [pathname]);
   const mobileLinks = navigation;
+  function toggleSidebar() {
+    const next = !sidebarExpanded;
+    window.localStorage.setItem(sidebarStorageKey, next ? 'expanded' : 'collapsed');
+    window.dispatchEvent(new Event(sidebarChangeEvent));
+  }
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     window.location.href = '/login';
   }
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarExpanded ? '' : ' sidebar-collapsed'}`}>
       <aside className="sidebar">
-        <a className="brand" href="/" aria-label="CHI.HUB 홈">
-          <span className="brand-mark">C</span>
-          <span>
-            CHI.HUB<small>personal operating system</small>
-          </span>
-        </a>
+        <div className="sidebar-brand-row">
+          <a className="brand" href="/" aria-label="CHI.HUB 홈">
+            <span className="brand-mark">C</span>
+            <span>
+              CHI.HUB<small>personal operating system</small>
+            </span>
+          </a>
+          <button
+            aria-label="사이드바 접기"
+            className="sidebar-toggle sidebar-toggle-inset"
+            onClick={toggleSidebar}
+            type="button"
+          >
+            <PanelLeftClose size={19} />
+          </button>
+        </div>
         <nav className="side-nav" aria-label="주 메뉴">
-          <p>MY SPACE</p>
+          <p>Apps</p>
           {navigation.map(({ href, label, icon: Icon }) => (
             <a
               className={pathname === href ? 'active' : ''}
@@ -83,6 +117,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </aside>
+      <button
+        aria-label="사이드바 펼치기"
+        className="sidebar-toggle sidebar-toggle-floating"
+        onClick={toggleSidebar}
+        type="button"
+      >
+        <PanelLeftOpen size={19} />
+      </button>
       <div className="mobile-header">
         <a className="mobile-brand" href="/">
           <span className="brand-mark">C</span> CHI.HUB
@@ -98,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SheetTitle className="mobile-menu-title">
               <span className="brand-mark">C</span>
               <span>
-                CHI.HUB<small>ALL SPACES</small>
+                CHI.HUB<small>APPS</small>
               </span>
             </SheetTitle>
             <nav className="mobile-menu-nav" aria-label="전체 메뉴">
