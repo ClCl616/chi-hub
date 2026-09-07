@@ -37,7 +37,9 @@ export function NotesWorkspace() {
   const [category, setCategory] = useState('개인');
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
   const [preview, setPreview] = useState(false);
-  useEffect(()=>{if(!selectedId)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType]);
+  const savedSnapshot = useRef('');
+  const snapshot = () => JSON.stringify({ title, content, pinned, category, contentType });
+  useEffect(()=>{if(!selectedId||snapshot()===savedSnapshot.current)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType,selectedId]);
   const filtered = useMemo(
     () =>
       (notes.data?.notes ?? []).filter((item) =>
@@ -54,6 +56,7 @@ export function NotesWorkspace() {
     setPinned(note.pinned);
     setCategory(note.category ?? '개인');
     setContentType(note.content_type ?? 'markdown');
+    savedSnapshot.current = JSON.stringify({ title: note.title, content: note.content, pinned: note.pinned, category: note.category ?? '개인', contentType: note.content_type ?? 'markdown' });
     setStatus('');
   }
   function startNew() {
@@ -63,6 +66,7 @@ export function NotesWorkspace() {
     setPinned(false);
     setCategory('개인');
     setContentType('markdown');
+    savedSnapshot.current = '';
     setStatus('새 메모');
   }
   async function save() {
@@ -87,6 +91,7 @@ export function NotesWorkspace() {
         setSelectedId(result.note.id);
       }
       await notes.refresh();
+      savedSnapshot.current = snapshot();
       setStatus('저장됨');
     } catch (error) {
       setStatus(
