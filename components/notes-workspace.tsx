@@ -125,8 +125,12 @@ export function NotesWorkspace() {
       setPinned(false);
       setCategory('개인');
       setContentType('markdown');
+      newDraft.current = true;
+      savedSnapshot.current = '';
       await notes.refresh();
-      setStatus('삭제됨');
+      if (statusTimer.current) window.clearTimeout(statusTimer.current);
+      setStatusFading(false);
+      setStatus('');
       setDeleteOpen(false);
     } catch (error) {
       setStatus(
