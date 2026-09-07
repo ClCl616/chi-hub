@@ -53,6 +53,7 @@ export function NotesWorkspace() {
     [notes.data, query],
   );
   function selectNote(note: Note) {
+    if (selectedId && content.trim() && snapshot() !== savedSnapshot.current) void save();
     loadingNote.current = true;
     setSelectedId(note.id);
     setTitle(note.title);
@@ -100,10 +101,10 @@ export function NotesWorkspace() {
         await notes.refresh();
       }
       savedSnapshot.current = JSON.stringify({ title: savedTitle, content, pinned, category, contentType });
-      const remaining = 500 - (Date.now() - statusStartedAt);
+      const remaining = 1200 - (Date.now() - statusStartedAt);
       if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
       setStatus('저장됨');
-      if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>setStatus(''),2000);
+      if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>setStatus(''),3000);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : '저장하지 못했습니다.',
