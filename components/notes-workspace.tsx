@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
@@ -21,6 +21,9 @@ export function NotesWorkspace() {
   const [pinned, setPinned] = useState(false);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
+  const [category, setCategory] = useState('개인');
+  const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
+  useEffect(()=>{if(!selectedId)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned]);
   const filtered = useMemo(
     () =>
       (notes.data?.notes ?? []).filter((item) =>
@@ -55,13 +58,13 @@ export function NotesWorkspace() {
         await apiRequest('/api/notes', {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ id: selectedId, title, content, pinned }),
+          body: JSON.stringify({ id: selectedId, title, content, pinned, category, contentType }),
         });
       } else {
         const result = await apiRequest<{ note: Note }>('/api/notes', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ title, content, pinned }),
+          body: JSON.stringify({ title, content, pinned, category, contentType }),
         });
         setSelectedId(result.note.id);
       }
@@ -143,6 +146,8 @@ export function NotesWorkspace() {
       </aside>
       <section className="workspace-card note-editor">
         <div className="editor-toolbar">
+          <select aria-label="메모 형식" value={contentType} onChange={(event)=>setContentType(event.target.value as 'markdown'|'sticky'|'drawing')}><option value="markdown">문서</option><option value="sticky">스티커</option><option value="drawing">필기</option></select>
+          <select aria-label="카테고리" value={category} onChange={(event)=>setCategory(event.target.value)}>{['업무','공부','아이디어','개인'].map(item=><option key={item}>{item}</option>)}</select>
           <button
             className={pinned ? 'active' : ''}
             onClick={() => setPinned((value) => !value)}
@@ -168,14 +173,20 @@ export function NotesWorkspace() {
           placeholder="제목"
           value={title}
         />
-        <textarea
+        {contentType === 'drawing' ? <textarea
+          aria-label="필기 데이터"
+          className="note-content-input"
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="필기 모드: 태블릿 필기 데이터를 저장할 수 있습니다."
+          value={content}
+        /> : <textarea
           aria-label="메모 내용"
           className="note-content-input"
           maxLength={50000}
           onChange={(event) => setContent(event.target.value)}
           placeholder="지금 떠오른 생각을 적어보세요…"
           value={content}
-        />
+        />}
       </section>
     </div>
   );
