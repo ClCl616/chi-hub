@@ -38,8 +38,10 @@ export function NotesWorkspace() {
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
   const [preview, setPreview] = useState(false);
   const savedSnapshot = useRef('');
+  const loadingNote = useRef(false);
+  const statusTimer = useRef<number | null>(null);
   const snapshot = () => JSON.stringify({ title, content, pinned, category, contentType });
-  useEffect(()=>{if(!selectedId||snapshot()===savedSnapshot.current)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType,selectedId]);
+  useEffect(()=>{if(loadingNote.current){loadingNote.current=false;return}if(!selectedId||snapshot()===savedSnapshot.current)return;setStatus('');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType,selectedId]);
   const filtered = useMemo(
     () =>
       (notes.data?.notes ?? []).filter((item) =>
@@ -50,6 +52,7 @@ export function NotesWorkspace() {
     [notes.data, query],
   );
   function selectNote(note: Note) {
+    loadingNote.current = true;
     setSelectedId(note.id);
     setTitle(note.title);
     setContent(note.content);
@@ -89,10 +92,11 @@ export function NotesWorkspace() {
           body: JSON.stringify({ title, content, pinned, category, contentType }),
         });
         setSelectedId(result.note.id);
+        await notes.refresh();
       }
-      await notes.refresh();
       savedSnapshot.current = snapshot();
       setStatus('저장됨');
+      if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>setStatus(''),2000);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : '저장하지 못했습니다.',
