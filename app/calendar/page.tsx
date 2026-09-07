@@ -1,0 +1,1 @@
+import {FeatureLayout} from '@/components/feature-layout';import {CalendarWorkspace} from '@/components/calendar-workspace';export default function Page(){return <FeatureLayout eyebrow="CALENDAR" title="캘린더"><CalendarWorkspace/></FeatureLayout>}
