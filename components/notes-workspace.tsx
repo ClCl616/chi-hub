@@ -39,9 +39,10 @@ export function NotesWorkspace() {
   const [preview, setPreview] = useState(false);
   const savedSnapshot = useRef('');
   const loadingNote = useRef(false);
+  const newDraft = useRef(false);
   const statusTimer = useRef<number | null>(null);
   const snapshot = () => JSON.stringify({ title, content, pinned, category, contentType });
-  useEffect(()=>{if(loadingNote.current){loadingNote.current=false;return}if(!selectedId||snapshot()===savedSnapshot.current)return;setStatus('');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType,selectedId]);
+  useEffect(()=>{if(loadingNote.current){loadingNote.current=false;return}if((!selectedId&&!newDraft.current)||!content.trim()||snapshot()===savedSnapshot.current)return;setStatus('');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType,selectedId]);
   const filtered = useMemo(
     () =>
       (notes.data?.notes ?? []).filter((item) =>
@@ -63,6 +64,7 @@ export function NotesWorkspace() {
     setStatus('');
   }
   function startNew() {
+    newDraft.current = true;
     setSelectedId(null);
     setTitle('');
     setContent('');
@@ -73,11 +75,10 @@ export function NotesWorkspace() {
     setStatus('새 메모');
   }
   async function save() {
-    if (!title.trim() && !content.trim()) {
-      setStatus('내용을 입력해주세요.');
-      return;
-    }
+    if (!content.trim()) return;
     setStatus('저장 중…');
+    const statusStartedAt = Date.now();
+    let savedTitle = title;
     try {
       if (selectedId) {
         await apiRequest('/api/notes', {
@@ -86,15 +87,21 @@ export function NotesWorkspace() {
           body: JSON.stringify({ id: selectedId, title, content, pinned, category, contentType }),
         });
       } else {
+        const generatedTitle = title.trim() || `새 메모 · ${new Intl.DateTimeFormat('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date())}`;
+        savedTitle = generatedTitle;
+        if (!title.trim()) setTitle(generatedTitle);
         const result = await apiRequest<{ note: Note }>('/api/notes', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ title, content, pinned, category, contentType }),
+          body: JSON.stringify({ title: generatedTitle, content, pinned, category, contentType }),
         });
         setSelectedId(result.note.id);
+        newDraft.current = false;
         await notes.refresh();
       }
-      savedSnapshot.current = snapshot();
+      savedSnapshot.current = JSON.stringify({ title: savedTitle, content, pinned, category, contentType });
+      const remaining = 500 - (Date.now() - statusStartedAt);
+      if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
       setStatus('저장됨');
       if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>setStatus(''),2000);
     } catch (error) {
@@ -185,7 +192,7 @@ export function NotesWorkspace() {
             <Pin size={16} /> {pinned ? '고정됨' : '고정'}
           </button>
           {contentType === 'markdown' && <button className={preview ? 'active' : ''} onClick={() => setPreview((value) => !value)} type="button">{preview ? '편집' : '미리보기'}</button>}
-          <output>{status}</output>
+          <output className={`save-status ${status ? 'visible' : ''}`}>{status}</output>
           {selectedId && (
             <button className="danger-text" onClick={remove} type="button">
               <Trash2 size={15} /> 삭제
