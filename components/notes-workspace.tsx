@@ -34,6 +34,7 @@ export function NotesWorkspace() {
   const [pinned, setPinned] = useState(false);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
+  const [statusFading, setStatusFading] = useState(false);
   const [category, setCategory] = useState('개인');
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
   const [preview, setPreview] = useState(false);
@@ -77,7 +78,7 @@ export function NotesWorkspace() {
   }
   async function save() {
     if (!content.trim()) return;
-    setStatus('저장 중…');
+    setStatusFading(false);setStatus('저장 중…');
     const statusStartedAt = Date.now();
     let savedTitle = title;
     try {
@@ -101,10 +102,10 @@ export function NotesWorkspace() {
         await notes.refresh();
       }
       savedSnapshot.current = JSON.stringify({ title: savedTitle, content, pinned, category, contentType });
-      const remaining = 1200 - (Date.now() - statusStartedAt);
+      const remaining = 1500 - (Date.now() - statusStartedAt);
       if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
-      setStatus('저장됨');
-      if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>setStatus(''),3000);
+      setStatusFading(false);setStatus('저장됨');
+      if(statusTimer.current)window.clearTimeout(statusTimer.current);statusTimer.current=window.setTimeout(()=>{setStatusFading(true);statusTimer.current=window.setTimeout(()=>{setStatus('');setStatusFading(false)},800)},1500);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : '저장하지 못했습니다.',
@@ -193,7 +194,7 @@ export function NotesWorkspace() {
             <Pin size={16} /> {pinned ? '고정됨' : '고정'}
           </button>
           {contentType === 'markdown' && <button className={preview ? 'active' : ''} onClick={() => setPreview((value) => !value)} type="button">{preview ? '편집' : '미리보기'}</button>}
-          <output className={`save-status ${status ? 'visible' : ''}`}>{status}</output>
+          <output className={`save-status ${status ? 'visible' : ''} ${statusFading ? 'fading' : ''}`}>{status}</output>
           {selectedId && (
             <button className="danger-text" onClick={remove} type="button">
               <Trash2 size={15} /> 삭제
