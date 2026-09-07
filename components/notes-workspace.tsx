@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
@@ -15,6 +15,17 @@ type Note = {
   created_at: string;
   updated_at: string;
 };
+function DrawingPad({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  useEffect(() => { const canvas = canvasRef.current; if (!canvas || !value) return; const image = new Image(); image.onload = () => canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height); image.src = value; }, [value]);
+  const point = (event: React.PointerEvent<HTMLCanvasElement>) => { const canvas = canvasRef.current!; const bounds = canvas.getBoundingClientRect(); return { x: (event.clientX - bounds.left) * canvas.width / bounds.width, y: (event.clientY - bounds.top) * canvas.height / bounds.height }; };
+  const start = (event: React.PointerEvent<HTMLCanvasElement>) => { drawing.current = true; event.currentTarget.setPointerCapture(event.pointerId); const context = canvasRef.current?.getContext('2d'); const p = point(event); context?.beginPath(); context?.moveTo(p.x, p.y); };
+  const draw = (event: React.PointerEvent<HTMLCanvasElement>) => { if (!drawing.current) return; const canvas = canvasRef.current!; const context = canvas.getContext('2d')!; const p = point(event); context.lineTo(p.x, p.y); context.strokeStyle = '#171916'; context.lineWidth = 4; context.lineCap = 'round'; context.lineJoin = 'round'; context.stroke(); };
+  const end = () => { if (!drawing.current) return; drawing.current = false; onChange(canvasRef.current?.toDataURL('image/png') ?? ''); };
+  const clear = () => { const canvas = canvasRef.current; if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); onChange(''); };
+  return <div className="drawing-pad"><div><span>펜 또는 마우스로 필기하세요.</span><button type="button" onClick={clear}>지우기</button></div><canvas aria-label="필기 캔버스" ref={canvasRef} width="1200" height="700" onPointerDown={start} onPointerMove={draw} onPointerUp={end} onPointerCancel={end}/></div>;
+}
 export function NotesWorkspace() {
   const notes = useApi<{ notes: Note[] }>('/api/notes');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,6 +36,7 @@ export function NotesWorkspace() {
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('개인');
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
+  const [preview, setPreview] = useState(false);
   useEffect(()=>{if(!selectedId)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType]);
   const filtered = useMemo(
     () =>
@@ -163,6 +175,7 @@ export function NotesWorkspace() {
           >
             <Pin size={16} /> {pinned ? '고정됨' : '고정'}
           </button>
+          {contentType === 'markdown' && <button className={preview ? 'active' : ''} onClick={() => setPreview((value) => !value)} type="button">{preview ? '편집' : '미리보기'}</button>}
           <output>{status}</output>
           {selectedId && (
             <button className="danger-text" onClick={remove} type="button">
@@ -181,15 +194,9 @@ export function NotesWorkspace() {
           placeholder="제목"
           value={title}
         />
-        {contentType === 'drawing' ? <textarea
-          aria-label="필기 데이터"
-          className="note-content-input"
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="필기 모드: 태블릿 필기 데이터를 저장할 수 있습니다."
-          value={content}
-        /> : <textarea
+        {contentType === 'drawing' ? <DrawingPad value={content} onChange={setContent}/> : preview ? <pre className="markdown-preview">{content || 'Markdown 미리보기'}</pre> : <textarea
           aria-label="메모 내용"
-          className="note-content-input"
+          className={`note-content-input ${contentType === 'sticky' ? 'sticky-content-input' : ''}`}
           maxLength={50000}
           onChange={(event) => setContent(event.target.value)}
           placeholder="지금 떠오른 생각을 적어보세요…"
