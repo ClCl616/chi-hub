@@ -182,9 +182,6 @@ export function NotesWorkspace() {
               <Trash2 size={15} /> 삭제
             </button>
           )}
-          <button className="save-button" onClick={save} type="button">
-            저장
-          </button>
         </div>
         <input
           aria-label="메모 제목"

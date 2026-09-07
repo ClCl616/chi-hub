@@ -3,7 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Dumbbell,
-  FileArchive,
+  HardDrive,
   LayoutDashboard,
   LogIn,
   LogOut,
@@ -32,7 +32,7 @@ const navigation = [
   { href: '/calendar', label: '캘린더', icon: CalendarDays },
   { href: '/workouts', label: '운동', icon: Dumbbell },
   { href: '/notes', label: '메모', icon: NotebookPen },
-  { href: '/files', label: '파일', icon: FileArchive },
+  { href: '/files', label: '드라이브', icon: HardDrive },
 ];
 const sidebarStorageKey = 'chi-hub-sidebar';
 const sidebarChangeEvent = 'chi-hub-sidebar-change';
