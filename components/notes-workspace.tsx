@@ -35,6 +35,7 @@ export function NotesWorkspace() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [statusFading, setStatusFading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [category, setCategory] = useState('개인');
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
   const [preview, setPreview] = useState(false);
@@ -113,7 +114,7 @@ export function NotesWorkspace() {
     }
   }
   async function remove() {
-    if (!selectedId || !window.confirm('이 메모를 삭제할까요?')) return;
+    if (!selectedId) return;
     try {
       await apiRequest(`/api/notes?id=${encodeURIComponent(selectedId)}`, {
         method: 'DELETE',
@@ -126,6 +127,7 @@ export function NotesWorkspace() {
       setContentType('markdown');
       await notes.refresh();
       setStatus('삭제됨');
+      setDeleteOpen(false);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : '삭제하지 못했습니다.',
@@ -196,7 +198,7 @@ export function NotesWorkspace() {
           {contentType === 'markdown' && <button className={preview ? 'active' : ''} onClick={() => setPreview((value) => !value)} type="button">{preview ? '편집' : '미리보기'}</button>}
           <output className={`save-status ${status ? 'visible' : ''} ${statusFading ? 'fading' : ''}`}>{status}</output>
           {selectedId && (
-            <button className="danger-text" onClick={remove} type="button">
+            <button className="danger-text" onClick={() => setDeleteOpen(true)} type="button">
               <Trash2 size={15} /> 삭제
             </button>
           )}
@@ -218,6 +220,7 @@ export function NotesWorkspace() {
           value={content}
         />}
       </section>
+      {deleteOpen && <div className="delete-modal" role="dialog" aria-modal="true" aria-label="메모 삭제"><div><p className="card-label">DELETE NOTE</p><h2>이 메모를 삭제할까요?</h2><p>삭제한 메모는 복구할 수 없습니다.</p><section><button type="button" onClick={()=>setDeleteOpen(false)}>취소</button><button className="danger" type="button" onClick={()=>void remove()}>삭제</button></section></div></div>}
     </div>
   );
 }
