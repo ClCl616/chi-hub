@@ -10,6 +10,8 @@ type Note = {
   title: string;
   content: string;
   pinned: boolean;
+  content_type: 'markdown' | 'sticky' | 'drawing';
+  category: string;
   created_at: string;
   updated_at: string;
 };
@@ -23,7 +25,7 @@ export function NotesWorkspace() {
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('개인');
   const [contentType, setContentType] = useState<'markdown'|'sticky'|'drawing'>('markdown');
-  useEffect(()=>{if(!selectedId)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned]);
+  useEffect(()=>{if(!selectedId)return;setStatus('저장 대기…');const timer=window.setTimeout(()=>void save(),800);return()=>window.clearTimeout(timer)},[title,content,pinned,category,contentType]);
   const filtered = useMemo(
     () =>
       (notes.data?.notes ?? []).filter((item) =>
@@ -38,6 +40,8 @@ export function NotesWorkspace() {
     setTitle(note.title);
     setContent(note.content);
     setPinned(note.pinned);
+    setCategory(note.category ?? '개인');
+    setContentType(note.content_type ?? 'markdown');
     setStatus('');
   }
   function startNew() {
@@ -45,6 +49,8 @@ export function NotesWorkspace() {
     setTitle('');
     setContent('');
     setPinned(false);
+    setCategory('개인');
+    setContentType('markdown');
     setStatus('새 메모');
   }
   async function save() {
@@ -86,6 +92,8 @@ export function NotesWorkspace() {
       setTitle('');
       setContent('');
       setPinned(false);
+      setCategory('개인');
+      setContentType('markdown');
       await notes.refresh();
       setStatus('삭제됨');
     } catch (error) {

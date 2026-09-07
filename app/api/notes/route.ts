@@ -11,7 +11,7 @@ export async function GET() {
       );
     const { data, error } = await supabase
       .from('notes')
-      .select('id,title,content,pinned,created_at,updated_at')
+      .select('id,title,content,pinned,content_type,category,drawing_data,created_at,updated_at')
       .order('pinned', { ascending: false })
       .order('updated_at', { ascending: false })
       .limit(200);
