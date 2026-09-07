@@ -99,11 +99,6 @@ export function FocusTimer() {
         savedEnd.current = saved.endAt;
         localStorage.removeItem(storageKey);
         setCompletion(saved.mode);
-        void saveSession({
-          task: saved.task,
-          mode: saved.mode,
-          durationSeconds: saved.durationSeconds,
-        });
       }
     } catch {
       localStorage.removeItem(storageKey);
@@ -122,7 +117,6 @@ export function FocusTimer() {
         if (savedEnd.current !== completedEnd) {
           savedEnd.current = completedEnd;
           setCompletion(mode);
-          void saveSession();
           if ('Notification' in window && Notification.permission === 'granted')
             new Notification('CHI.HUB', {
               body:
@@ -236,7 +230,7 @@ export function FocusTimer() {
     }
   }
   const syncText = {
-    idle: '완료된 세션은 계정에 자동 저장됩니다.',
+    idle: '완료 후 원할 때만 기록을 남길 수 있습니다.',
     saving: '세션을 저장하는 중…',
     saved: '세션이 안전하게 저장됐습니다.',
     error: '세션을 저장하지 못했습니다.',
@@ -259,15 +253,6 @@ export function FocusTimer() {
               </button>
             ))}
           </div>
-          <label className="task-field">
-            <span>이번 세션에 집중할 일</span>
-            <input
-              maxLength={80}
-              onChange={(event) => setTask(event.target.value)}
-              placeholder="예: 프로젝트 기획안 완성하기"
-              value={task}
-            />
-          </label>
           <div
             className="timer-ring"
             style={
@@ -307,7 +292,7 @@ export function FocusTimer() {
                   {time}
                 </button>
               )}
-              <small>{task || '집중할 일을 입력하세요'}</small>
+              <small>{running ? '진행 중' : '바로 시작하세요'}</small>
             </div>
           </div>
           <div className="timer-controls">
@@ -409,14 +394,9 @@ export function FocusTimer() {
             <h2 id="completion-title">
               {completion === 'focus' ? '집중 완료!' : '휴식 완료!'}
             </h2>
-            <p id="completion-description">
-              {completion === 'focus'
-                ? '오늘의 집중 기록에 안전하게 저장했어요.'
-                : '충분히 쉬었어요. 다음 집중을 준비해볼까요?'}
-            </p>
-            <button onClick={() => setCompletion(null)} type="button">
-              확인
-            </button>
+            <p id="completion-description">사용 시간 {Math.round(durationSeconds / 60)}분</p>
+            <label className="task-field"><span>기록 (선택)</span><input maxLength={80} onChange={(event)=>setTask(event.target.value)} placeholder="무엇을 했나요?" value={task}/></label>
+            <div className="timer-controls"><button className="round-control" onClick={()=>{setTask('');setCompletion(null)}} type="button">취소</button><button className="play-control" onClick={async()=>{await saveSession();setTask('');setCompletion(null)}} type="button">기록 저장</button></div>
           </dialog>
         </div>
       )}
