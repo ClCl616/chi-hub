@@ -68,6 +68,7 @@ export async function PATCH(request: Request) {
     const id = String(body.id ?? '');
     const quality = Number(body.quality);
     if (!id) return NextResponse.json({ message: '진행 중인 수면 기록이 없습니다.' }, { status: 400 });
+    if (body.action === 'save') { const {data,error}=await supabase.from('sleep_logs').update({quality:quality>=1&&quality<=5?quality:null,note:String(body.note??'').trim().slice(0,300)||null}).eq('id',id).select().single();if(error)throw error;return NextResponse.json({log:data}); }
     const { data: active, error: findError } = await supabase
       .from('sleep_logs')
       .select('slept_at')
@@ -77,6 +78,7 @@ export async function PATCH(request: Request) {
     if (findError) throw findError;
     if (new Date() <= new Date(active.slept_at))
       return NextResponse.json({ message: '수면 시간이 너무 짧습니다. 잠시 후 다시 시도해주세요.' }, { status: 400 });
+    if (body.action === 'end') { const {data,error}=await supabase.from('sleep_logs').update({woke_at:new Date().toISOString()}).eq('id',id).select().single(); if(error)throw error; return NextResponse.json({log:data}); }
     const { data, error } = await supabase
       .from('sleep_logs')
       .update({

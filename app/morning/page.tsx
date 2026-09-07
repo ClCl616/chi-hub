@@ -3,8 +3,8 @@ import { MorningWorkspace } from '@/components/morning-workspace';
 export default function Page() {
   return (
     <FeatureLayout
-      eyebrow="MIRACLE MORNING & SLEEP"
-      title="하루의 리듬"
+      eyebrow="ROUTINES"
+      title="루틴"
     >
       <MorningWorkspace />
     </FeatureLayout>
