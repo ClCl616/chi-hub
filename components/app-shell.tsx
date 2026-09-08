@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   TimerReset,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   Sheet,
@@ -30,6 +31,7 @@ const navigation = [
   { href: '/morning', label: '루틴', icon: MoonStar },
   { href: '/sleep', label: '수면', icon: BedDouble },
   { href: '/calendar', label: '캘린더', icon: CalendarDays },
+  { href: '/meals', label: '학식', icon: UtensilsCrossed },
   { href: '/workouts', label: '운동', icon: Dumbbell },
   { href: '/notes', label: '메모', icon: NotebookPen },
   { href: '/files', label: '드라이브', icon: HardDrive },
