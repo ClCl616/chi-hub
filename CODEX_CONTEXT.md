@@ -20,8 +20,8 @@ CHI.HUB는 한 사용자의 일상 기록과 생산성 도구를 한곳에 모�
 ### 새 채팅에서 먼저 확인할 인수인계 요약
 
 - 대상 저장소는 **chi-hub**다. 현재 PC 경로는 `C:\Users\AIDIS3\Archive\Projects\chi-hub`이며 인접한 다른 프로젝트의 문서를 사용하지 않는다.
-- 이번 UI 구현의 마지막 커밋은 `ee8c3e3`이다. 이 문서 정리 시작 시 작업 트리는 깨끗했고, `main`은 로컬 추적 참조 `origin/main`(`bcd9aed`)보다 4개 커밋 앞섰다. 원격 서버를 이번 문서 작업에서 새로 조회하지 않았으며 GitHub push도 하지 않았다. 이후 문서 정리 커밋이 추가될 수 있으므로 숫자보다 `git log`와 `git status -sb`를 확인한다.
-- **GitHub clone/pull만으로 이번 UI 변경이 전달된다고 가정하지 않는다.** 아래 전달 절차로 `ee8c3e3` 및 이 문서 정리 커밋이 포함된 저장소를 확보한다.
+- 이번 UI 구현의 마지막 커밋은 `ee8c3e3`이다. 이 문서 정리 시작 시 작업 트리는 깨끗했고, `main`은 로컬 추적 참조 `origin/main`(`bcd9aed`)보다 4개 커밋 앞섰다. 이후 사용자 요청으로 2026-09-15에 UI 및 문서 커밋 `c2d5dfe`까지 GitHub `origin/main`에 push했다. 이 동기화 상태를 기록한 후속 문서 커밋도 같은 원격에 반영한다. 현재 차이는 `git log`와 `git status -sb`로 확인한다.
+- **이번 UI와 인수인계 문서는 GitHub main에 동기화됐다.** 새 PC에서 clone/pull 후 `ee8c3e3`, `c2d5dfe` 및 후속 동기화 문서 커밋이 포함됐는지 확인한다.
 - 사용자의 최종 방향: 기존 밝은 배경·검정·라임 색감 유지, 참고 이미지의 그룹 사이드바·상단 상태 행·정돈된 카드 배치만 적용. 탭은 기능 화면을 구분하며 선택한 기능 하나만 표시한다. 전체 기능 나열이나 별도 대시보드 요약 탭으로 되돌리지 않는다.
 - UI 구현과 로컬 검증은 완료했다. 추가 제품 작업은 새 사용자 요청을 따른다. 운영 게시는 Sites `project_not_found`로 미완료이며 기존 프로젝트 연결 복구가 필요하다.
 - 현재 PC에는 `.env.local`이 없다. 서버가 떠 있어도 실제 로그인·데이터 연결 성공을 의미하지 않는다. 새 PC에서는 Node/npm 설치와 환경 변수 준비 후 실행한다.
@@ -264,7 +264,7 @@ Git으로 추적되는 unit/e2e 테스트 스위트는 없다. 이번 작업의 
 
 ### 새 PC 초기 설정
 
-1. **이번 변경이 포함된 프로젝트 전체를 확보한다.** GitHub에는 이번 UI 커밋을 push하지 않았다. 아래 Git 전달 절차에 따라 문서 정리 커밋까지 받은 뒤 `git log`로 확인한다.
+1. **이번 변경이 포함된 프로젝트 전체를 확보한다.** GitHub main을 clone/pull해 UI와 인수인계 문서 커밋을 받은 뒤 `git log`로 확인한다.
 2. Node.js 22.13 이상을 설치한다.
 3. 프로젝트 루트에서 `npm ci`를 실행한다.
 4. `.env.example`을 참고해 `.env.local`을 만들고 운영 Supabase 공개 설정을 입력한다.
@@ -330,7 +330,7 @@ npm run lint
 - `.env.local`, 빌드 산출물(`dist`, `.next`, `.vinext`)과 로컬 Wrangler 상태는 전달 대상이 아니다.
 - USB로 옮길 때는 저장소와 숨김 `.git` 디렉터리를 함께 복사하거나, 최소한 추적 파일 전체와 최신 커밋을 포함하는 Git bundle을 사용한다.
 - 다른 PC의 새 Codex 세션에서는 먼저 `AGENTS.md`, `CODEX_CONTEXT.md`, 실제 `git status`, `git log`, `package.json`, `.openai/hosting.json`을 확인한다.
-- 이번 UI 커밋은 GitHub와 Sites 양쪽에 미반영이다. 소스 전달은 저장소 복사 또는 Git bundle을 사용하거나, 사용자가 별도로 GitHub 동기화를 요청한 뒤 origin에 push한다. 이 문서 갱신 요청 자체를 push 요청으로 해석하지 않는다.
+- 2026-09-15 사용자 요청으로 이번 UI와 인수인계 문서를 GitHub origin/main에 push했다. 새 PC는 GitHub clone/pull로 이어갈 수 있다. Sites 운영 게시는 여전히 미완료이며 소스 동기화와 운영 배포를 구분한다.
 - Git bundle로 옮길 때는 문서 정리 커밋까지 만든 뒤 현재 PC에서 `git bundle create ../chi-hub-handoff.bundle main`, `git bundle verify ../chi-hub-handoff.bundle`을 실행할 수 있다. 새 PC에서는 `git clone /path/to/chi-hub-handoff.bundle chi-hub`로 복원한다. bundle clone의 origin은 bundle 경로이므로 GitHub remote를 자동으로 가진다고 가정하지 않는다. 이 명령들은 전달 안내이며 이번 문서 정리에서 bundle을 생성한 것은 아니다.
 - 새 채팅 시작 요청 예: “AGENTS.md와 CODEX_CONTEXT.md를 끝까지 읽고 실제 Git 상태와 비교해줘. 밝은 배경·검정·라임과 기능별 단일 화면 탭 구조를 유지하면서 다음 요청을 이어가줘. 이번 UI는 로컬 완료·운영 미배포 상태인지 먼저 확인해줘.”
 
