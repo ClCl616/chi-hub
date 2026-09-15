@@ -17,6 +17,15 @@ CHI.HUB는 한 사용자의 일상 기록과 생산성 도구를 한곳에 모�
 
 ## 개발 환경
 
+### 새 채팅에서 먼저 확인할 인수인계 요약
+
+- 대상 저장소는 **chi-hub**다. 현재 PC 경로는 `C:\Users\AIDIS3\Archive\Projects\chi-hub`이며 인접한 다른 프로젝트의 문서를 사용하지 않는다.
+- 이번 UI 구현의 마지막 커밋은 `ee8c3e3`이다. 이 문서 정리 시작 시 작업 트리는 깨끗했고, `main`은 로컬 추적 참조 `origin/main`(`bcd9aed`)보다 4개 커밋 앞섰다. 원격 서버를 이번 문서 작업에서 새로 조회하지 않았으며 GitHub push도 하지 않았다. 이후 문서 정리 커밋이 추가될 수 있으므로 숫자보다 `git log`와 `git status -sb`를 확인한다.
+- **GitHub clone/pull만으로 이번 UI 변경이 전달된다고 가정하지 않는다.** 아래 전달 절차로 `ee8c3e3` 및 이 문서 정리 커밋이 포함된 저장소를 확보한다.
+- 사용자의 최종 방향: 기존 밝은 배경·검정·라임 색감 유지, 참고 이미지의 그룹 사이드바·상단 상태 행·정돈된 카드 배치만 적용. 탭은 기능 화면을 구분하며 선택한 기능 하나만 표시한다. 전체 기능 나열이나 별도 대시보드 요약 탭으로 되돌리지 않는다.
+- UI 구현과 로컬 검증은 완료했다. 추가 제품 작업은 새 사용자 요청을 따른다. 운영 게시는 Sites `project_not_found`로 미완료이며 기존 프로젝트 연결 복구가 필요하다.
+- 현재 PC에는 `.env.local`이 없다. 서버가 떠 있어도 실제 로그인·데이터 연결 성공을 의미하지 않는다. 새 PC에서는 Node/npm 설치와 환경 변수 준비 후 실행한다.
+
 ### 핵심 스택
 
 - TypeScript, React 19
@@ -58,12 +67,16 @@ Google OAuth와 이메일 인증 콜백이 동작하려면 Supabase Redirect URL
 ├─ app/
 │  ├─ api/                       # 인증 및 기능별 서버 API
 │  ├─ auth/callback/             # Supabase OAuth/이메일 콜백
-│  ├─ calendar|files|focus|.../  # 앱별 페이지
+│  ├─ page.tsx                   # AppShell + DashboardWorkspace 진입점
+│  ├─ calendar|files|focus|.../   # 기존 주소 → ?view=기능명 리다이렉트
 │  ├─ globals.css                # 전체 디자인 시스템과 기능별 스타일
+│  ├─ dashboard.css              # 기존 CSS 뒤에 적용하는 대시보드 배치 스타일
 │  ├─ layout.tsx                 # 메타데이터, 폰트, PWA 등록
 │  └─ manifest.ts                # PWA manifest
 ├─ components/
 │  ├─ app-shell.tsx              # 공통 사이드바/모바일 내비게이션/인증 게이트
+│  ├─ dashboard-workspace.tsx    # 8개 기능의 keepMounted 탭 패널
+│  ├─ workspace-status.tsx       # 상단 오늘 집중/루틴/할 일 요약
 │  ├─ *-workspace.tsx            # 앱별 클라이언트 작업 화면
 │  └─ ui/                        # 프로젝트에 포함된 UI 프리미티브
 ├─ hooks/use-api.ts              # API 조회/재시도 및 요청 helper
@@ -191,7 +204,7 @@ Google OAuth와 이메일 인증 콜백이 동작하려면 Supabase Redirect URL
 6. **한국외대 메뉴를 추정하지 않는다.** 공식 날짜별 식단 소스를 찾지 못한 상태에서는 확인 가능한 식당 운영 정보만 표시한다.
 7. **운영 배포는 Sites 전용 저장소만 사용한다.** GitHub `origin`은 다른 PC와 소스를 동기화하기 위한 용도이며 사용자가 명시적으로 요청한 경우에만 push한다. Sites 저장소 자격 증명은 필요할 때 도구에서 발급받아 해당 명령에만 사용하며 Git remote나 파일에 저장하지 않는다.
 8. **`.env.local`은 영구적으로 로컬 전용이다.** Git, 인수인계 문서, 로그에 실제 값을 남기지 않는다.
-9. **기존 디자인을 확장한다.** 검정/라임/종이색 토큰과 공통 AppShell/FeatureLayout을 유지하고, 기능 추가 시 기존 UI 프리미티브를 우선 재사용한다.
+9. **기존 디자인을 확장한다.** 검정/라임/종이색 토큰과 공통 AppShell/탭 구조를 유지하고, 기능 추가 시 기존 UI 프리미티브를 우선 재사용한다. 현재 홈은 FeatureLayout이 아니라 AppShell + DashboardWorkspace로 구성된다.
 
 ## 해결한 문제
 
@@ -224,7 +237,7 @@ Google OAuth와 이메일 인증 콜백이 동작하려면 Supabase Redirect URL
 - `app/api/routines/route.ts`: unknown body 값을 `String()` 처리하는 `no-base-to-string` 2건
 - `components/calendar-workspace.tsx`: deprecated `React.FormEvent` 진단 1건
 
-자동화된 unit/e2e 테스트 파일은 현재 없다. 검증은 빌드, API 응답, 사용자가 요청한 경우의 브라우저 QA에 의존한다.
+Git으로 추적되는 unit/e2e 테스트 스위트는 없다. 이번 작업의 임시 Playwright 스크립트와 결과/스크린샷은 무시되는 `work/`에만 있어 새 PC에 자동 전달되지 않는다. 재검증 범위는 아래 검증 항목을 따른다. 전체 lint의 8개 진단은 과거 실행 결과이며 이번 UI 변경에서는 변경 컴포넌트만 lint를 실행했다.
 
 ### 기능 및 운영
 
@@ -251,7 +264,7 @@ Google OAuth와 이메일 인증 콜백이 동작하려면 Supabase Redirect URL
 
 ### 새 PC 초기 설정
 
-1. **최신 프로젝트 전체를 확보한다.** 2026-09-09부터 GitHub `main`에도 컨텍스트 문서를 포함한 현재 소스를 동기화하므로 새 PC에서는 GitHub 저장소를 clone할 수 있다. 그래도 작업 전 원격 최신 커밋과 로컬 HEAD가 일치하는지 확인한다.
+1. **이번 변경이 포함된 프로젝트 전체를 확보한다.** GitHub에는 이번 UI 커밋을 push하지 않았다. 아래 Git 전달 절차에 따라 문서 정리 커밋까지 받은 뒤 `git log`로 확인한다.
 2. Node.js 22.13 이상을 설치한다.
 3. 프로젝트 루트에서 `npm ci`를 실행한다.
 4. `.env.example`을 참고해 `.env.local`을 만들고 운영 Supabase 공개 설정을 입력한다.
@@ -273,9 +286,11 @@ npm run build
 npm run lint
 ```
 
-- 2026-09-08 학식 구현 후 `npm run build`에 해당하는 Vinext production build가 성공함.
-- 현재 전체 lint에는 위의 알려진 8개 진단이 남아 있음.
-- 자동 테스트 스위트는 없음.
+- 2026-09-15 `ee8c3e3` UI 소스 기준 production build, `tsc --noEmit --incremental false`, 변경 컴포넌트 oxlint 및 `git diff --check` 통과. 이후 문서만 수정하는 작업에서는 빌드를 반복하지 않는다.
+- 전체 lint의 과거 8개 진단과 추적되는 자동 테스트 스위트 부재는 위 코드 품질 항목 참고.
+- 이번 브라우저 검증: Edge headless에서 8개 탭 × 1440/1024/390px, 한 패널만 표시·가로 넘침 없음, 메모 초안/자동 저장·실행 타이머 유지, 방향키+Enter, 모바일 메뉴, 새로고침/뒤로 가기/레거시 해시/8개 주소 리다이렉트, 비선택 탭 타이머 완료 창, 상단 요약 집계·변경 후 갱신·조회 실패 표시를 확인했다.
+- 테스트 컨텍스트에서 `/api/**` 조회와 변경을 모두 대체 응답으로 처리했다. 실제 Supabase 인증/CRUD/운영 화면 검증을 완료한 것으로 해석하지 않는다.
+- 현재 PC의 임시 QA 파일: `work/tabs-qa.cjs`, `work/tab-timer-completion-qa.cjs`, `work/layout-status-qa.cjs`. Playwright와 Edge 경로가 현재 PC에 종속되며 정식 프로젝트 의존성이나 이식 가능한 테스트 스위트가 아니다.
 - 로컬 HTTP smoke test 시 최소 `/`, `/login`, 수정한 페이지와 관련 API의 비오류 응답을 확인한다.
 - 학식 점검 예: `/api/campus-meals?university=dju`, `cbnu`, `hufs`와 `/meals`.
 - 인증된 CRUD 테스트는 운영 데이터를 바꾸므로 테스트용 레코드 범위를 명확히 하고 즉시 정리한다.
@@ -315,13 +330,14 @@ npm run lint
 - `.env.local`, 빌드 산출물(`dist`, `.next`, `.vinext`)과 로컬 Wrangler 상태는 전달 대상이 아니다.
 - USB로 옮길 때는 저장소와 숨김 `.git` 디렉터리를 함께 복사하거나, 최소한 추적 파일 전체와 최신 커밋을 포함하는 Git bundle을 사용한다.
 - 다른 PC의 새 Codex 세션에서는 먼저 `AGENTS.md`, `CODEX_CONTEXT.md`, 실제 `git status`, `git log`, `package.json`, `.openai/hosting.json`을 확인한다.
-- GitHub `origin`에서 새로 clone한 뒤 `main`의 최신 커밋인지 확인한다. 이후 Sites에만 반영된 커밋이 생겼다면 별도 동기화가 필요할 수 있다.
+- 이번 UI 커밋은 GitHub와 Sites 양쪽에 미반영이다. 소스 전달은 저장소 복사 또는 Git bundle을 사용하거나, 사용자가 별도로 GitHub 동기화를 요청한 뒤 origin에 push한다. 이 문서 갱신 요청 자체를 push 요청으로 해석하지 않는다.
+- Git bundle로 옮길 때는 문서 정리 커밋까지 만든 뒤 현재 PC에서 `git bundle create ../chi-hub-handoff.bundle main`, `git bundle verify ../chi-hub-handoff.bundle`을 실행할 수 있다. 새 PC에서는 `git clone /path/to/chi-hub-handoff.bundle chi-hub`로 복원한다. bundle clone의 origin은 bundle 경로이므로 GitHub remote를 자동으로 가진다고 가정하지 않는다. 이 명령들은 전달 안내이며 이번 문서 정리에서 bundle을 생성한 것은 아니다.
+- 새 채팅 시작 요청 예: “AGENTS.md와 CODEX_CONTEXT.md를 끝까지 읽고 실제 Git 상태와 비교해줘. 밝은 배경·검정·라임과 기능별 단일 화면 탭 구조를 유지하면서 다음 요청을 이어가줘. 이번 UI는 로컬 완료·운영 미배포 상태인지 먼저 확인해줘.”
 
 ## 최근 작업 기록
 
 - 2026-09-15: 참고 이미지의 그룹 메뉴·상단 상태 행·컴팩트한 카드 배치를 적용하되 기존 밝은 배경/검정/라임 색상 유지. 24개 화면/크기 조합, 탭 상태 보존·키보드·타이머 완료 창과 요약 집계/변경 갱신/오류 표시를 격리된 테스트 API로 검증. TypeScript·변경 컴포넌트 lint·production build 통과. 실제 데이터 수정 없음. 기존 Sites 프로젝트 접근 불가로 로컬 반영만 완료.
 - 2026-09-15: 사용자 피드백으로 전체 패널 나열을 폐기하고 기능별 실제 탭으로 재구성. 중복 패널 프레임과 접기/확대 UI 제거, 한 번에 한 작업 화면만 표시. 8개 탭 × 1440/1024/390px에서 표시 화면 1개·숨은 화면 상태 유지·가로 넘침 없음. 키보드(방향키+Enter), 모바일 메뉴, 메모 내용·실행 타이머 유지, 비선택 타이머 완료 창, 새로고침·뒤로 가기·이전 해시와 8개 이전 주소 복원 검증. 테스트 API만 사용했으며 운영 데이터 변경 없음. build·TypeScript·변경 컴포넌트 lint 통과. Sites 접근 불가 상태 유지.
-- 2026-09-15: 사용자 정정에 따라 전체 시스템을 단일 대시보드로 전환. 8개 기능을 실제 조작 가능한 패널로 통합하고 개별 페이지는 앵커 리다이렉트로 전환했다. Edge headless 1440/1024/390px에서 문서·패널 가로 넘침과 페이지 오류 없음. 패널 접기/확대/동일 해시 재이동, 타이머 지속·접힌 상태 완료 창, 메모 유지·테스트 응답 자동 저장, 루틴 변경 후 캘린더 갱신, 모바일 메뉴, 8개 이전 주소 리다이렉트 및 캘린더 날짜를 확인했다. production build·TypeScript·공통 셸/패널/타이머/조회 훅 lint 통과. 운영 API는 대체 응답으로 검증했으며 실제 CRUD와 전체 lint는 미검증. Sites 조회는 계속 `project_not_found`로 게시 미완료.
 - 2026-09-09: 프로젝트 내부 지속 컨텍스트 시스템(`CODEX_CONTEXT.md`, `AGENTS.md`) 도입 및 다른 PC 동기화를 위해 GitHub `main` 업로드를 사용자 요청으로 허용.
 - 2026-09-08 · `3926970`: 대전대·충북대·한국외대 학식 앱 추가, 로컬 API/페이지 및 production build 검증, 비공개 Sites 게시.
 - 2026-09-07 · `75055bf`: 메모 삭제 후 새 draft 상태 초기화.
