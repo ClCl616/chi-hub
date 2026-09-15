@@ -1,10 +1,5 @@
-import { FeatureLayout } from '@/components/feature-layout';
-import { MealsWorkspace } from '@/components/meals-workspace';
+import { redirect } from 'next/navigation';
 
-export default function MealsPage() {
-  return (
-    <FeatureLayout eyebrow="CAMPUS MEALS" title="오늘, 뭐 먹지?">
-      <MealsWorkspace />
-    </FeatureLayout>
-  );
+export default function Page() {
+  redirect('/#meals');
 }

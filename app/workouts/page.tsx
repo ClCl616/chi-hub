@@ -1,12 +1,5 @@
-import { FeatureLayout } from '@/components/feature-layout';
-import { WorkoutWorkspace } from '@/components/workout-workspace';
+import { redirect } from 'next/navigation';
+
 export default function Page() {
-  return (
-    <FeatureLayout
-      eyebrow="WORKOUT LOG"
-      title="운동"
-    >
-      <WorkoutWorkspace />
-    </FeatureLayout>
-  );
+  redirect('/#workouts');
 }

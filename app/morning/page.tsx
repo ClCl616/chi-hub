@@ -1,12 +1,5 @@
-import { FeatureLayout } from '@/components/feature-layout';
-import { MorningWorkspace } from '@/components/morning-workspace';
+import { redirect } from 'next/navigation';
+
 export default function Page() {
-  return (
-    <FeatureLayout
-      eyebrow="ROUTINES"
-      title="루틴"
-    >
-      <MorningWorkspace />
-    </FeatureLayout>
-  );
+  redirect('/#morning');
 }

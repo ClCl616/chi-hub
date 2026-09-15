@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import {
   Dumbbell,
   HardDrive,
-  LayoutDashboard,
   LogIn,
   LogOut,
   Menu,
@@ -26,16 +25,30 @@ import {
 } from '@/components/ui/sheet';
 
 const navigation = [
-  { href: '/', label: '대시보드', icon: LayoutDashboard },
-  { href: '/focus', label: '타이머', icon: TimerReset },
-  { href: '/morning', label: '루틴', icon: MoonStar },
-  { href: '/sleep', label: '수면', icon: BedDouble },
-  { href: '/calendar', label: '캘린더', icon: CalendarDays },
-  { href: '/meals', label: '학식', icon: UtensilsCrossed },
-  { href: '/workouts', label: '운동', icon: Dumbbell },
-  { href: '/notes', label: '메모', icon: NotebookPen },
-  { href: '/files', label: '드라이브', icon: HardDrive },
+  { href: '#focus', label: '타이머', icon: TimerReset },
+  { href: '#morning', label: '루틴 · 할 일', icon: MoonStar },
+  { href: '#sleep', label: '수면', icon: BedDouble },
+  { href: '#calendar', label: '캘린더', icon: CalendarDays },
+  { href: '#meals', label: '학식', icon: UtensilsCrossed },
+  { href: '#workouts', label: '운동', icon: Dumbbell },
+  { href: '#notes', label: '메모', icon: NotebookPen },
+  { href: '#files', label: '드라이브', icon: HardDrive },
 ];
+function subscribeToPanel(onChange: () => void) {
+  window.addEventListener('hashchange', onChange);
+  return () => window.removeEventListener('hashchange', onChange);
+}
+function getPanelSnapshot() {
+  return window.location.hash;
+}
+function getServerPanelSnapshot() {
+  return '';
+}
+function revealPanel() {
+  requestAnimationFrame(() =>
+    window.dispatchEvent(new Event('chi-hub-reveal-panel')),
+  );
+}
 const sidebarStorageKey = 'chi-hub-sidebar';
 const sidebarChangeEvent = 'chi-hub-sidebar-change';
 function subscribeToSidebar(onStoreChange: () => void) {
@@ -50,6 +63,11 @@ function getServerSidebarSnapshot() {
 }
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const activePanel = useSyncExternalStore(
+    subscribeToPanel,
+    getPanelSnapshot,
+    getServerPanelSnapshot,
+  );
   const sidebarExpanded = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
@@ -62,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     fetch('/api/auth/status', { cache: 'no-store' })
       .then((response) => {
         if (response.status === 401) {
-          window.location.href = `/login?returnTo=${encodeURIComponent(pathname)}`;
+          window.location.href = `/login?returnTo=${encodeURIComponent(pathname + window.location.hash)}`;
           return;
         }
         setAuthState(response.ok ? 'ready' : 'offline');
@@ -89,7 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </a>
       <aside className="sidebar">
         <div className="sidebar-brand-row">
-          <a className="brand" href="/" aria-label="CHI.HUB 홈">
+          <a className="brand" href="#workspace" aria-label="작업 공간 맨 위로">
             <span className="brand-mark">C</span>
             <span>
               CHI.HUB<small>내 하루의 작업 공간</small>
@@ -105,13 +123,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className="side-nav" aria-label="주 메뉴">
-          <p>내 공간</p>
+          <p>작업 패널</p>
           {navigation.map(({ href, label, icon: Icon }) => (
             <a
-              className={pathname === href ? 'active' : ''}
+              className={activePanel === href ? 'active' : ''}
               href={href}
+              onClick={revealPanel}
               key={href}
-              aria-current={pathname === href ? 'page' : undefined}
+              aria-current={activePanel === href ? 'location' : undefined}
             >
               <Icon size={19} />
               <span>{label}</span>
@@ -139,7 +158,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <PanelLeftOpen size={19} />
       </button>
       <div className="mobile-header">
-        <a className="mobile-brand" href="/">
+        <a className="mobile-brand" href="#workspace">
           <span className="brand-mark">C</span> CHI.HUB
         </a>
         <Sheet>
@@ -153,7 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SheetTitle className="mobile-menu-title">
               <span className="brand-mark">C</span>
               <span>
-                CHI.HUB<small>APPS</small>
+                CHI.HUB<small>작업 패널</small>
               </span>
             </SheetTitle>
             <nav className="mobile-menu-nav" aria-label="전체 메뉴">
@@ -163,8 +182,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   render={
                     <a
                       aria-label={label}
-                      className={pathname === href ? 'active' : ''}
+                      className={activePanel === href ? 'active' : ''}
                       href={href}
+                      onClick={revealPanel}
                     />
                   }
                 >
@@ -191,12 +211,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div>
           <span>내 공간</span>
           <span aria-hidden="true">/</span>
-          <strong>
-            {navigation.find((item) => item.href === pathname)?.label ??
-              'CHI.HUB'}
-          </strong>
+          <strong>내 대시보드</strong>
         </div>
-        <a href="/calendar">
+        <a href="#calendar" onClick={revealPanel}>
           <CalendarDays size={16} /> 캘린더
         </a>
       </header>
@@ -215,17 +232,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </main>
       <nav className="bottom-nav" aria-label="모바일 주 메뉴">
-        {navigation.slice(0, 5).map(({ href, label, icon: Icon }) => (
-          <a
-            className={pathname === href ? 'active' : ''}
-            href={href}
-            key={href}
-            aria-current={pathname === href ? 'page' : undefined}
-          >
-            <Icon size={20} />
-            <span>{label}</span>
-          </a>
-        ))}
+        {navigation
+          .filter((item) =>
+            ['#focus', '#morning', '#notes', '#calendar', '#files'].includes(
+              item.href,
+            ),
+          )
+          .map(({ href, label, icon: Icon }) => (
+            <a
+              className={activePanel === href ? 'active' : ''}
+              href={href}
+              onClick={revealPanel}
+              key={href}
+              aria-current={activePanel === href ? 'location' : undefined}
+            >
+              <Icon size={20} />
+              <span>{label}</span>
+            </a>
+          ))}
       </nav>
     </div>
   );

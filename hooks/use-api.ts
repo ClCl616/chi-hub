@@ -32,6 +32,26 @@ export function useApi<T>(url: string) {
   useEffect(() => {
     queueMicrotask(() => void refresh());
   }, [refresh]);
+  useEffect(() => {
+    // A dashboard keeps all tools mounted: reflect records from other panels
+    // in the integrated calendar without losing any panel's draft state.
+    const changed = (event: Event) => {
+      const source = (event as CustomEvent<string>).detail;
+      if (
+        url === '/api/calendar' &&
+        [
+          '/api/routines',
+          '/api/daily-tasks',
+          '/api/sleep-logs',
+          '/api/focus-sessions',
+        ].includes(source)
+      ) {
+        void refresh();
+      }
+    };
+    window.addEventListener('chi-hub-data-changed', changed);
+    return () => window.removeEventListener('chi-hub-data-changed', changed);
+  }, [url, refresh]);
   return { data, loading, error, refresh, setData };
 }
 
@@ -42,5 +62,12 @@ export async function apiRequest<T>(url: string, init: RequestInit) {
   };
   if (!response.ok)
     throw new Error(body.message ?? '요청을 처리하지 못했습니다.');
+  if (init.method && init.method.toUpperCase() !== 'GET') {
+    window.dispatchEvent(
+      new CustomEvent('chi-hub-data-changed', {
+        detail: new URL(url, window.location.origin).pathname,
+      }),
+    );
+  }
   return body as T;
 }

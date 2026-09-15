@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Clock3,
@@ -52,9 +53,7 @@ export function FocusTimer() {
   const [completion, setCompletion] = useState<Mode | null>(null);
   const endAt = useRef<number | null>(null);
   const savedEnd = useRef<number | null>(null);
-  const saveSession = async (
-    payload = { task, mode, durationSeconds },
-  ) => {
+  const saveSession = async (payload = { task, mode, durationSeconds }) => {
     setSyncState('saving');
     try {
       await apiRequest('/api/focus-sessions', {
@@ -165,7 +164,8 @@ export function FocusTimer() {
     )
       return;
     setMode(next);
-    const nextSeconds = (modes.find((item) => item.id === next)?.minutes ?? 25) * 60;
+    const nextSeconds =
+      (modes.find((item) => item.id === next)?.minutes ?? 25) * 60;
     setDurationSeconds(nextSeconds);
     setDurationDraft(formatDuration(nextSeconds));
     setSeconds(nextSeconds);
@@ -381,25 +381,59 @@ export function FocusTimer() {
             <DataNotice empty="완료한 세션이 여기에 쌓입니다." />
           )}
       </section>
-      {completion && (
-        <div className="completion-overlay" role="presentation">
-          <dialog
-            aria-describedby="completion-description"
-            aria-labelledby="completion-title"
-            className="completion-card"
-            open
-          >
-            <CheckCircle2 size={34} />
-            <p className="card-label">SESSION COMPLETE</p>
-            <h2 id="completion-title">
-              {completion === 'focus' ? '집중 완료!' : '휴식 완료!'}
-            </h2>
-            <p id="completion-description">사용 시간 {Math.round(durationSeconds / 60)}분</p>
-            <label className="task-field"><span>기록 (선택)</span><input maxLength={80} onChange={(event)=>setTask(event.target.value)} placeholder="무엇을 했나요?" value={task}/></label>
-            <div className="timer-controls"><button className="round-control" onClick={()=>{setTask('');setCompletion(null)}} type="button">취소</button><button className="play-control" onClick={async()=>{await saveSession();setTask('');setCompletion(null)}} type="button">기록 저장</button></div>
-          </dialog>
-        </div>
-      )}
+      {completion &&
+        createPortal(
+          <div className="completion-overlay" role="presentation">
+            <dialog
+              aria-describedby="completion-description"
+              aria-labelledby="completion-title"
+              className="completion-card"
+              open
+            >
+              <CheckCircle2 size={34} />
+              <p className="card-label">SESSION COMPLETE</p>
+              <h2 id="completion-title">
+                {completion === 'focus' ? '집중 완료!' : '휴식 완료!'}
+              </h2>
+              <p id="completion-description">
+                사용 시간 {Math.round(durationSeconds / 60)}분
+              </p>
+              <label className="task-field">
+                <span>기록 (선택)</span>
+                <input
+                  maxLength={80}
+                  onChange={(event) => setTask(event.target.value)}
+                  placeholder="무엇을 했나요?"
+                  value={task}
+                />
+              </label>
+              <div className="timer-controls">
+                <button
+                  className="round-control"
+                  onClick={() => {
+                    setTask('');
+                    setCompletion(null);
+                  }}
+                  type="button"
+                >
+                  취소
+                </button>
+                <button
+                  className="play-control"
+                  onClick={async () => {
+                    await saveSession();
+                    setTask('');
+                    setCompletion(null);
+                  }}
+                  type="button"
+                >
+                  기록 저장
+                </button>
+              </div>
+            </dialog>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
