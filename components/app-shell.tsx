@@ -1,15 +1,14 @@
 'use client';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { usePathname } from 'next/navigation';
 import {
+  BedDouble,
+  CalendarDays,
   Dumbbell,
   HardDrive,
   LogIn,
   LogOut,
   Menu,
   MoonStar,
-  BedDouble,
-  CalendarDays,
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
@@ -23,37 +22,57 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
+import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const navigation = [
-  { href: '#focus', label: '타이머', icon: TimerReset },
-  { href: '#morning', label: '루틴 · 할 일', icon: MoonStar },
-  { href: '#sleep', label: '수면', icon: BedDouble },
-  { href: '#calendar', label: '캘린더', icon: CalendarDays },
-  { href: '#meals', label: '학식', icon: UtensilsCrossed },
-  { href: '#workouts', label: '운동', icon: Dumbbell },
-  { href: '#notes', label: '메모', icon: NotebookPen },
-  { href: '#files', label: '드라이브', icon: HardDrive },
+  { id: 'focus', label: '타이머', icon: TimerReset },
+  { id: 'morning', label: '루틴 · 할 일', icon: MoonStar },
+  { id: 'calendar', label: '캘린더', icon: CalendarDays },
+  { id: 'notes', label: '메모', icon: NotebookPen },
+  { id: 'sleep', label: '수면', icon: BedDouble },
+  { id: 'workouts', label: '운동', icon: Dumbbell },
+  { id: 'files', label: '드라이브', icon: HardDrive },
+  { id: 'meals', label: '학식', icon: UtensilsCrossed },
 ];
-function subscribeToPanel(onChange: () => void) {
+const viewChanged = 'chi-hub-view-changed';
+function subscribeToView(onChange: () => void) {
+  window.addEventListener(viewChanged, onChange);
+  window.addEventListener('popstate', onChange);
   window.addEventListener('hashchange', onChange);
-  return () => window.removeEventListener('hashchange', onChange);
+  return () => {
+    window.removeEventListener(viewChanged, onChange);
+    window.removeEventListener('popstate', onChange);
+    window.removeEventListener('hashchange', onChange);
+  };
 }
-function getPanelSnapshot() {
-  return window.location.hash;
+function getViewSnapshot() {
+  const url = new URL(window.location.href);
+  const value = url.searchParams.get('view') ?? url.hash.slice(1);
+  return navigation.some((item) => item.id === value) ? value : 'focus';
 }
-function getServerPanelSnapshot() {
-  return '';
+function getServerViewSnapshot() {
+  return 'focus';
 }
-function revealPanel() {
-  requestAnimationFrame(() =>
-    window.dispatchEvent(new Event('chi-hub-reveal-panel')),
-  );
+function selectView(value: unknown) {
+  if (
+    typeof value !== 'string' ||
+    !navigation.some((item) => item.id === value)
+  )
+    return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('view', value);
+  url.hash = '';
+  if (url.href !== window.location.href)
+    window.history.pushState(null, '', url);
+  window.dispatchEvent(new Event(viewChanged));
+  window.scrollTo({ top: 0 });
 }
 const sidebarStorageKey = 'chi-hub-sidebar';
 const sidebarChangeEvent = 'chi-hub-sidebar-change';
-function subscribeToSidebar(onStoreChange: () => void) {
-  window.addEventListener(sidebarChangeEvent, onStoreChange);
-  return () => window.removeEventListener(sidebarChangeEvent, onStoreChange);
+function subscribeToSidebar(onChange: () => void) {
+  window.addEventListener(sidebarChangeEvent, onChange);
+  return () => window.removeEventListener(sidebarChangeEvent, onChange);
 }
 function getSidebarSnapshot() {
   return window.localStorage.getItem(sidebarStorageKey) !== 'collapsed';
@@ -61,12 +80,12 @@ function getSidebarSnapshot() {
 function getServerSidebarSnapshot() {
   return true;
 }
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const activePanel = useSyncExternalStore(
-    subscribeToPanel,
-    getPanelSnapshot,
-    getServerPanelSnapshot,
+  const activeView = useSyncExternalStore(
+    subscribeToView,
+    getViewSnapshot,
+    getServerViewSnapshot,
   );
   const sidebarExpanded = useSyncExternalStore(
     subscribeToSidebar,
@@ -77,22 +96,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     'checking',
   );
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const legacyView = url.hash.slice(1);
+    if (
+      !url.searchParams.has('view') &&
+      navigation.some((item) => item.id === legacyView)
+    ) {
+      url.searchParams.set('view', legacyView);
+      url.hash = '';
+      window.history.replaceState(null, '', url);
+      window.dispatchEvent(new Event(viewChanged));
+    }
+  }, []);
+  useEffect(() => {
     fetch('/api/auth/status', { cache: 'no-store' })
       .then((response) => {
         if (response.status === 401) {
-          window.location.href = `/login?returnTo=${encodeURIComponent(pathname + window.location.hash)}`;
+          const url = new URL(window.location.href);
+          window.location.href =
+            '/login?returnTo=' +
+            encodeURIComponent(url.pathname + url.search + url.hash);
           return;
         }
         setAuthState(response.ok ? 'ready' : 'offline');
       })
       .catch(() => setAuthState('offline'));
-  }, [pathname]);
-  const mobileLinks = navigation;
+  }, []);
   function toggleSidebar() {
-    const next = !sidebarExpanded;
     window.localStorage.setItem(
       sidebarStorageKey,
-      next ? 'expanded' : 'collapsed',
+      sidebarExpanded ? 'collapsed' : 'expanded',
     );
     window.dispatchEvent(new Event(sidebarChangeEvent));
   }
@@ -100,19 +133,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     window.location.href = '/login';
   }
+  const title = navigation.find((item) => item.id === activeView)?.label;
   return (
-    <div className={`app-shell${sidebarExpanded ? '' : ' sidebar-collapsed'}`}>
+    <TabsPrimitive.Root
+      value={activeView}
+      onValueChange={selectView}
+      orientation="vertical"
+      className={
+        'app-shell workspace-tabs' +
+        (sidebarExpanded ? '' : ' sidebar-collapsed')
+      }
+    >
       <a className="skip-content" href="#workspace">
         본문으로 건너뛰기
       </a>
       <aside className="sidebar">
         <div className="sidebar-brand-row">
-          <a className="brand" href="#workspace" aria-label="작업 공간 맨 위로">
+          <div className="brand">
             <span className="brand-mark">C</span>
             <span>
-              CHI.HUB<small>내 하루의 작업 공간</small>
+              CHI.HUB<small>나의 작업 공간</small>
             </span>
-          </a>
+          </div>
           <button
             aria-label="사이드바 접기"
             className="sidebar-toggle sidebar-toggle-inset"
@@ -122,29 +164,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <PanelLeftClose size={19} />
           </button>
         </div>
-        <nav className="side-nav" aria-label="주 메뉴">
-          <p>작업 패널</p>
-          {navigation.map(({ href, label, icon: Icon }) => (
-            <a
-              className={activePanel === href ? 'active' : ''}
-              href={href}
-              onClick={revealPanel}
-              key={href}
-              aria-current={activePanel === href ? 'location' : undefined}
-            >
-              <Icon size={19} />
-              <span>{label}</span>
-            </a>
-          ))}
-        </nav>
+        <div className="side-nav">
+          <p>내 공간</p>
+          <TabsList className="workspace-tab-list" aria-label="작업 구분">
+            {navigation.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger className="workspace-tab" key={id} value={id}>
+                <Icon size={19} />
+                <span>{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
         <div className="sidebar-footer">
           {authState === 'ready' ? (
             <button onClick={logout} type="button">
-              <LogOut size={18} /> 로그아웃
+              <LogOut size={18} />
+              로그아웃
             </button>
           ) : (
             <a href="/login">
-              <LogIn size={18} /> 로그인
+              <LogIn size={18} />
+              로그인
             </a>
           )}
         </div>
@@ -157,10 +197,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <PanelLeftOpen size={19} />
       </button>
-      <div className="mobile-header">
-        <a className="mobile-brand" href="#workspace">
-          <span className="brand-mark">C</span> CHI.HUB
-        </a>
+      <header className="mobile-header">
+        <div className="mobile-brand">
+          <span className="brand-mark">C</span>CHI.HUB
+        </div>
         <Sheet>
           <SheetTrigger
             className="mobile-menu-trigger"
@@ -169,53 +209,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Menu size={22} />
           </SheetTrigger>
           <SheetContent className="mobile-menu" side="right">
-            <SheetTitle className="mobile-menu-title">
-              <span className="brand-mark">C</span>
-              <span>
-                CHI.HUB<small>작업 패널</small>
-              </span>
-            </SheetTitle>
-            <nav className="mobile-menu-nav" aria-label="전체 메뉴">
-              {mobileLinks.map(({ href, label, icon: Icon }) => (
+            <SheetTitle className="mobile-menu-title">작업 선택</SheetTitle>
+            <div className="mobile-menu-nav">
+              {navigation.map(({ id, label, icon: Icon }) => (
                 <SheetClose
-                  key={href}
-                  render={
-                    <a
-                      aria-label={label}
-                      className={activePanel === href ? 'active' : ''}
-                      href={href}
-                      onClick={revealPanel}
-                    />
-                  }
+                  key={id}
+                  className={activeView === id ? 'active' : ''}
+                  onClick={() => selectView(id)}
+                  aria-pressed={activeView === id}
                 >
                   <Icon size={19} />
                   <span>{label}</span>
                 </SheetClose>
               ))}
-            </nav>
+            </div>
             <div className="mobile-menu-footer">
               {authState === 'ready' ? (
                 <button onClick={logout} type="button">
-                  <LogOut size={18} /> 로그아웃
+                  <LogOut size={18} />
+                  로그아웃
                 </button>
               ) : (
-                <SheetClose render={<a aria-label="로그인" href="/login" />}>
-                  <LogIn size={18} /> 로그인
-                </SheetClose>
+                <a href="/login">로그인</a>
               )}
             </div>
           </SheetContent>
         </Sheet>
-      </div>
+      </header>
       <header className="workspace-topbar">
-        <div>
-          <span>내 공간</span>
-          <span aria-hidden="true">/</span>
-          <strong>내 대시보드</strong>
-        </div>
-        <a href="#calendar" onClick={revealPanel}>
-          <CalendarDays size={16} /> 캘린더
-        </a>
+        <span>개인 워크스페이스</span>
+        <time>
+          {new Intl.DateTimeFormat('ko-KR', {
+            month: 'long',
+            day: 'numeric',
+            weekday: 'short',
+          }).format(new Date())}
+        </time>
       </header>
       <main className="main-content" id="workspace" tabIndex={-1}>
         {authState === 'checking' ? (
@@ -227,30 +256,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 데이터 연결을 확인해주세요. 일부 기능이 제한될 수 있습니다.
               </output>
             )}
-            {children}
+            <div className="tab-workspace">
+              <header className="tab-heading">
+                <h1>{title}</h1>
+              </header>
+              {children}
+            </div>
           </>
         )}
       </main>
-      <nav className="bottom-nav" aria-label="모바일 주 메뉴">
+      <nav className="bottom-nav" aria-label="모바일 작업 선택">
         {navigation
           .filter((item) =>
-            ['#focus', '#morning', '#notes', '#calendar', '#files'].includes(
-              item.href,
+            ['focus', 'morning', 'calendar', 'notes', 'files'].includes(
+              item.id,
             ),
           )
-          .map(({ href, label, icon: Icon }) => (
-            <a
-              className={activePanel === href ? 'active' : ''}
-              href={href}
-              onClick={revealPanel}
-              key={href}
-              aria-current={activePanel === href ? 'location' : undefined}
+          .map(({ id, label, icon: Icon }) => (
+            <button
+              type="button"
+              key={id}
+              className={activeView === id ? 'active' : ''}
+              aria-pressed={activeView === id}
+              onClick={() => selectView(id)}
             >
               <Icon size={20} />
               <span>{label}</span>
-            </a>
+            </button>
           ))}
       </nav>
-    </div>
+    </TabsPrimitive.Root>
   );
 }

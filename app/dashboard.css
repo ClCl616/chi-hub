@@ -318,543 +318,257 @@
   font-size: 14px;
 }
 
-/* One live workspace: modules remain mounted across panel navigation. */
-.hub-workspace {
-  max-width: 1600px;
-  margin: auto;
-}
-.hub-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.hub-heading h1 {
-  margin: 0;
-  font-size: 28px;
-  line-height: 1.3;
-  letter-spacing: -0.04em;
-  font-weight: 650;
-}
-.hub-heading > span {
-  color: var(--muted-ink);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-}
-.workspace-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 18;
-}
-.hub-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  align-items: start;
-  gap: 20px;
-}
-.hub-panel {
-  grid-column: span 6;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: white;
-  scroll-margin-top: 90px;
-}
-.hub-panel:focus {
-  outline: 2px solid #afc780;
-  outline-offset: 4px;
-}
-.hub-focus,
-.hub-sleep {
-  grid-column: span 4;
-}
-.hub-morning,
-.hub-workouts {
-  grid-column: span 8;
-}
-.hub-notes {
-  grid-column: span 7;
-}
-.hub-calendar {
-  grid-column: span 5;
-}
-.hub-panel.is-expanded {
-  grid-column: 1 / -1;
-}
-.hub-panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 60px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.hub-panel-heading h2 {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-}
-.hub-panel-heading h2 > svg {
-  color: #78865e;
-}
-.hub-panel-heading > div {
-  display: flex;
-  gap: 3px;
-}
-.hub-panel-heading button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted-ink);
-  cursor: pointer;
-}
-.hub-panel-heading button:hover,
-.hub-panel-heading button[aria-pressed='true'] {
-  background: #edf3e2;
-  color: var(--ink);
-}
-.hub-panel.is-collapsed .hub-panel-heading {
-  border-bottom: 0;
-}
-.hub-panel-body {
-  height: 520px;
-  overflow: auto;
-  padding: 18px;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd1c1 transparent;
-}
-.hub-panel-body[hidden] {
-  display: none;
-}
-.hub-panel.is-expanded .hub-panel-body {
-  height: min(78vh, 820px);
-  min-height: 400px;
-}
-.hub-panel .workspace-grid,
-.hub-panel .calendar-layout,
-.hub-panel .notes-layout,
-.hub-panel .files-layout,
-.hub-panel .meals-workspace,
-.hub-panel .timer-workspace {
-  margin: 0;
-}
-.hub-panel .workspace-card {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-}
-.hub-panel .section-title h2 {
-  font-size: 19px;
-  margin: 5px 0 0;
-}
-.hub-panel .card-label {
-  font-size: 12px;
-}
-.hub-panel .record-row {
-  min-height: 58px;
-}
-.hub-panel .record-row strong {
-  font-size: 14px;
-}
-.hub-panel .stack-form {
-  gap: 10px;
-  margin-top: 16px;
-}
-.hub-panel .stack-form input,
-.hub-panel .stack-form select {
-  padding: 9px 10px;
-  font-size: 14px;
-}
-.hub-panel .section-title .card-label {
-  color: var(--muted-ink);
-}
-.hub-panel .data-notice {
-  min-height: 64px;
-  font-size: 13px;
-}
-.hub-panel .check-row > span {
-  font-size: 14px;
-}
-.hub-panel .check-row small {
+/* Tabs divide the workspace; only the selected view is visible. */
+.workspace-tabs {
   display: block;
 }
-.hub-panel .morning-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-.hub-panel .routine-reset-note {
-  margin: 12px 0;
-  font-size: 13px;
-}
-.hub-panel .weekday-picker {
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.hub-panel .weekday-picker button {
-  width: 30px;
-  height: 30px;
-}
-.hub-panel .check-list {
-  margin-top: 18px;
-}
-.hub-panel .notes-layout {
-  display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 14px;
-  height: 100%;
-  min-height: 0;
-}
-.hub-panel .notes-sidebar {
-  padding: 0 12px 0 0;
-  border-right: 1px solid var(--line);
-  min-height: 0;
-}
-.hub-panel .notes-sidebar .notes-actions {
-  gap: 8px;
-}
-.hub-panel .note-list > button {
-  padding: 13px 0;
-}
-.hub-panel .note-list time {
-  position: static;
-  margin-top: 7px;
-}
-.hub-panel .note-list span {
-  padding-right: 0;
-}
-.hub-panel .note-editor {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  min-height: 0;
-}
-.hub-panel .editor-toolbar {
-  padding: 8px;
-  gap: 4px;
-}
-.hub-panel .editor-toolbar button {
-  padding: 7px;
-  font-size: 13px;
-}
-.hub-panel .editor-toolbar select {
-  font-size: 13px;
-  max-width: 130px;
-}
-.hub-panel .note-title-input {
-  font-size: 22px;
-  padding: 16px;
-  min-width: 0;
-}
-.hub-panel .note-content-input,
-.hub-panel .markdown-preview {
-  padding: 16px;
-  font-size: 15px;
-}
-.hub-panel .calendar-layout {
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
-.hub-panel .calendar-title h2 {
-  margin: 4px 0 14px;
-  font-size: 21px;
-}
-.hub-panel .calendar-title .card-label {
-  display: none;
-}
-.hub-panel .calendar-weekdays span {
-  padding: 7px 0;
-}
-.hub-panel .calendar-day {
-  padding: 5px;
-  min-height: 54px;
-  gap: 3px;
-}
-.hub-panel .calendar-day span {
-  font-size: 10px;
-  padding: 2px;
-  max-width: 100%;
-  overflow: hidden;
-}
-.hub-panel .calendar-day time {
-  font-size: 12px;
-}
-.hub-panel .calendar-detail {
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-}
-.hub-panel .calendar-detail .card-label {
-  display: none;
-}
-.hub-panel .calendar-detail h2 {
-  font-size: 17px;
-}
-.hub-panel .calendar-detail .stack-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.hub-panel .calendar-detail .submit-button {
-  grid-column: 1/-1;
-}
-.hub-focus {
-  background: #171916;
-  border-color: #171916;
-  color: white;
-}
-.hub-focus .hub-panel-heading {
-  border-bottom-color: #343a2d;
-}
-.hub-focus .hub-panel-heading h2 > svg {
-  color: var(--lime);
-}
-.hub-focus .hub-panel-heading button {
-  color: #b4bda8;
-}
-.hub-focus .hub-panel-heading button:hover {
-  background: #31392a;
-}
-.hub-focus .timer-workspace {
+.workspace-tabs .workspace-tab-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-.hub-focus .timer-panel {
-  min-height: 0;
-  padding: 0;
-  border-radius: 0;
-}
-.hub-focus .timer-ring {
-  width: 210px;
-  margin: 18px 0;
-}
-.hub-focus .timer-duration-button,
-.hub-focus .timer-duration-input {
-  font-size: 54px;
-  letter-spacing: -0.05em;
-}
-.hub-focus .mode-tabs {
+  align-items: stretch;
+  justify-content: flex-start;
   width: 100%;
-  justify-content: center;
-}
-.hub-focus .mode-tabs button {
-  font-size: 12px;
-  padding: 8px 10px;
-}
-.hub-focus .focus-summary {
-  display: block;
-}
-.hub-focus .focus-summary > div:first-child {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 0;
-  border-top: 1px solid #343a2d;
+  gap: 5px;
+  padding: 0;
   background: transparent;
   border-radius: 0;
-  padding: 16px 0 0;
 }
-.hub-focus .focus-summary > div:first-child strong {
-  font-size: 25px;
+.workspace-tabs .workspace-tab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 45px;
+  gap: 12px;
   margin: 0;
-  letter-spacing: 0;
-}
-.hub-focus .focus-summary > div:first-child span {
-  color: #adb79f;
-}
-.hub-focus .focus-guide {
-  display: none;
-}
-.hub-focus .sync-note {
+  padding: 11px 13px;
   border: 0;
-  padding: 10px 0;
+  border-radius: 8px;
   background: transparent;
-  color: #adb79f;
-  font-size: 12px;
+  color: #afb5a7;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
 }
-.hub-focus .focus-history {
-  border-top: 1px solid #343a2d;
-  padding-top: 16px;
-  margin-top: 10px;
-}
-.hub-focus .record-row {
-  border-color: #343a2d;
-}
-.hub-focus .record-row span,
-.hub-focus .data-notice {
-  color: #adb79f;
-}
-.hub-focus .completion-card {
-  color: var(--ink);
-}
-.hub-sleep .morning-grid {
-  grid-template-columns: 1fr;
-  gap: 24px;
-}
-.hub-sleep .history-card {
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-}
-.hub-sleep .sleep-card .card-label {
+.workspace-tabs .workspace-tab:after {
   display: none;
 }
-.hub-panel .workout-grid {
-  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1fr);
-  gap: 20px;
+.workspace-tabs .workspace-tab:hover {
+  background: #292e25;
+  color: white;
 }
-.hub-panel .stats-strip {
+.workspace-tabs .workspace-tab[data-active] {
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 650;
+}
+.workspace-tabs .workspace-tab svg {
+  width: 18px;
+  height: 18px;
+}
+.workspace-topbar {
+  height: 64px;
+  background: var(--paper);
   border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
 }
-.hub-panel .stats-strip > div {
-  padding: 0 16px;
+.workspace-topbar > span,
+.workspace-topbar time {
+  font-size: 13px;
+  color: var(--muted-ink);
 }
-.hub-panel .stats-strip > div:first-child {
-  padding-left: 0;
+.main-content {
+  padding-top: 24px;
 }
-.hub-panel .stats-strip strong {
-  font-size: 25px;
+.tab-workspace {
+  max-width: 1280px;
+  margin: auto;
+  min-width: 0;
 }
-.hub-panel .workout-history {
+.tab-heading {
+  margin: 0 0 24px;
+}
+.tab-heading h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.3;
+}
+.tab-view {
+  min-width: 0;
+}
+.tab-view[hidden] {
+  display: none !important;
+}
+.tab-view > .workspace-grid,
+.tab-view > .calendar-layout,
+.tab-view > .notes-layout,
+.tab-view > .files-layout,
+.tab-view > .meals-workspace,
+.tab-view > .timer-workspace {
+  margin-top: 0;
+}
+.tab-view .workspace-card {
+  box-shadow: none;
+  border-radius: 12px;
+  padding: 24px;
+}
+.tab-view .section-title h2 {
+  font-size: 20px;
+}
+.tab-view .calendar-title h2 {
+  font-size: 24px;
+}
+.tab-view .calendar-day {
+  min-height: 86px;
+}
+.tab-view .calendar-detail {
+  max-height: none;
+}
+.tab-view .notes-layout {
+  height: calc(100dvh - 198px);
+  min-height: 520px;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+.tab-view .notes-sidebar {
+  padding: 16px;
+}
+.tab-view .note-editor {
+  padding: 0;
+}
+.tab-view .note-content-input {
+  font-size: 16px;
+}
+.tab-view .timer-workspace {
+  grid-template-columns: minmax(0, 1fr) 270px;
+}
+.tab-view .timer-panel {
+  min-height: 490px;
+  padding: 24px;
+  border-radius: 12px;
+}
+.tab-view .timer-ring {
+  width: 260px;
+  margin: 24px 0;
+}
+.tab-view .focus-summary > div,
+.tab-view .sync-note {
+  border-radius: 12px;
+}
+.tab-view .focus-summary .focus-guide {
+  display: none;
+}
+.tab-view .focus-summary > div:first-child {
+  flex: 1;
+}
+.tab-view .focus-summary > div:first-child strong {
+  margin-top: 24px;
+}
+.tab-view .focus-history {
+  margin-top: 20px;
+}
+.tab-view .morning-grid {
+  gap: 20px;
+  align-items: start;
+}
+.tab-view .morning-grid > .history-card {
+  grid-column: auto;
+}
+.tab-view .sleep-card > .submit-button {
+  margin-top: 22px;
+  width: 100%;
+}
+.tab-view .workout-grid {
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+.tab-view .workout-history {
   grid-column: 2;
   grid-row: 2;
-  max-height: none;
-  overflow: visible;
 }
-.hub-panel .files-layout {
-  gap: 16px;
+.tab-view .stats-strip {
+  padding: 0;
 }
-.hub-panel .upload-card {
-  padding: 14px;
-  gap: 10px;
+.tab-view .school-switcher {
   border-radius: 10px;
-  background: #f5f7ef;
+  background: #e9ece4;
 }
-.hub-panel .upload-card > svg {
-  width: 22px;
-}
-.hub-panel .upload-card p {
-  display: none;
-}
-.hub-panel .upload-card button {
-  padding: 9px 12px;
-  font-size: 13px;
-}
-.hub-panel .file-list-card {
-  min-height: 0;
-}
-.hub-panel .file-row {
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 12px 0;
-}
-.hub-panel .file-row strong {
-  white-space: normal;
-}
-.hub-panel .school-switcher {
-  width: 100%;
-  border-radius: 10px;
-}
-.hub-panel .school-switcher button {
-  flex: 1;
+.tab-view .school-switcher button {
   border-radius: 7px;
-  padding: 9px 8px;
-  font-size: 13px;
 }
-.hub-panel .meal-overview {
-  padding: 16px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  border-radius: 10px;
+.tab-view .meal-overview {
+  border-radius: 12px;
 }
-.hub-panel .meal-overview h2 {
-  font-size: 21px;
+.tab-view .meal-card,
+.tab-view .facility-grid article {
+  border-radius: 12px;
 }
-.hub-panel .meal-date-strip {
-  gap: 5px;
-  margin-top: 12px;
-}
-.hub-panel .meal-date-strip button {
-  min-height: 64px;
+.mobile-menu-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  border: 0;
   border-radius: 9px;
-  padding: 8px;
+  background: transparent;
+  color: #adb0a8;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
 }
-.hub-panel .meal-date-strip button strong {
-  font-size: 12px;
+.mobile-menu-nav button.active {
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 650;
 }
-.hub-panel .meal-card-grid,
-.hub-panel .facility-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.hub-panel .meal-card,
-.hub-panel .facility-grid article {
-  padding: 14px;
+.bottom-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 48px;
+  padding: 5px 2px;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
 }
-.hub-panel.is-expanded .notes-layout {
-  grid-template-columns: 240px minmax(0, 1fr);
+.bottom-nav button.active {
+  background: var(--lime);
+  color: var(--ink);
 }
-.hub-panel.is-expanded .calendar-layout {
-  grid-template-columns: minmax(0, 1fr) 340px;
-}
-.hub-panel.is-expanded .calendar-detail {
-  border-top: 0;
-  border-left: 1px solid var(--line);
-  padding: 0 0 0 20px;
-}
-.hub-panel.is-expanded .calendar-day {
-  min-height: 90px;
-}
-.hub-focus.is-expanded .timer-workspace {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.hub-focus.is-expanded .timer-ring {
-  width: 280px;
-}
-.hub-panel.is-expanded .meal-card-grid,
-.hub-panel.is-expanded .facility-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.hub-panel.is-expanded .morning-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.hub-panel.is-expanded .sleep-card {
-  max-width: 600px;
-}
-@media (max-width: 1299px) {
-  .hub-panel {
-    grid-column: 1/-1;
+@media (min-width: 821px) and (max-width: 1100px) {
+  .main-content {
+    padding: 24px;
   }
-  .hub-grid {
-    gap: 18px;
-  }
-  .hub-panel .notes-layout {
-    grid-template-columns: 200px minmax(0, 1fr);
-  }
-  .hub-focus .timer-workspace {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .hub-focus .hub-panel-body {
-    height: 400px;
-  }
-  .hub-panel.is-expanded .calendar-layout {
+  .tab-view .calendar-layout {
     grid-template-columns: 1fr;
   }
-  .hub-panel.is-expanded .calendar-detail {
-    padding: 16px 0 0;
-    border-left: 0;
-    border-top: 1px solid var(--line);
+  .tab-view .timer-workspace {
+    grid-template-columns: minmax(0, 1fr) 210px;
+  }
+  .tab-view .notes-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .tab-view .workout-grid {
+    grid-template-columns: 1fr;
+  }
+  .tab-view .workout-history {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .tab-view .morning-grid {
+    grid-template-columns: 1fr;
+  }
+  .tab-view .meal-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 820px) {
@@ -864,7 +578,7 @@
   .main-content,
   .sidebar-collapsed .main-content {
     margin-left: 0;
-    padding: 22px 14px 110px;
+    padding: 24px 16px 105px;
   }
   .mobile-header {
     background: #ffffffed;
@@ -875,84 +589,82 @@
   .bottom-nav {
     bottom: max(10px, env(safe-area-inset-bottom));
   }
-  .bottom-nav a {
-    font-size: 11px;
-  }
-  .hub-heading {
+  .tab-heading {
     margin-bottom: 20px;
   }
-  .hub-heading h1 {
-    font-size: 24px;
+  .tab-heading h1 {
+    font-size: 25px;
   }
-  .hub-heading > span {
-    display: none;
+  .tab-view .workspace-card {
+    padding: 18px;
   }
-  .hub-panel {
-    scroll-margin-top: 80px;
-  }
-  .hub-panel-heading {
-    padding: 10px 14px;
-  }
-  .hub-panel-heading button {
-    width: 36px;
-    height: 36px;
-  }
-  .hub-panel-body {
-    height: 520px;
-    padding: 14px;
-  }
-  .hub-panel.is-expanded .hub-panel-body {
-    height: auto;
-    max-height: none;
-    min-height: 0;
-  }
-  .hub-focus .timer-workspace,
-  .hub-focus.is-expanded .timer-workspace {
-    display: flex;
-  }
-  .hub-focus .hub-panel-body {
-    height: 490px;
-  }
-  .hub-panel .morning-grid,
-  .hub-panel.is-expanded .morning-grid,
-  .hub-panel .workout-grid {
+  .tab-view .morning-grid,
+  .tab-view .calendar-layout,
+  .tab-view .timer-workspace,
+  .tab-view .workout-grid {
     grid-template-columns: 1fr;
   }
-  .hub-panel .workout-history {
+  .tab-view .workout-history {
     grid-column: auto;
     grid-row: auto;
   }
-  .hub-panel .notes-layout,
-  .hub-panel.is-expanded .notes-layout {
-    grid-template-columns: 1fr;
+  .tab-view .calendar-day {
+    min-height: 58px;
+  }
+  .tab-view .notes-layout {
     height: auto;
-  }
-  .hub-panel .notes-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 0 0 12px;
-    max-height: 190px;
-  }
-  .hub-panel .note-editor {
-    min-height: 420px;
-  }
-  .hub-panel .calendar-day {
-    min-height: 45px;
-  }
-  .hub-panel.is-expanded .calendar-day {
-    min-height: 54px;
-  }
-  .hub-panel .meal-card-grid,
-  .hub-panel .facility-grid,
-  .hub-panel.is-expanded .meal-card-grid,
-  .hub-panel.is-expanded .facility-grid {
+    min-height: 0;
     grid-template-columns: 1fr;
   }
-  .hub-panel .stats-strip > div {
-    padding: 0 10px;
+  .tab-view .notes-sidebar {
+    max-height: 260px;
   }
-  .hub-panel .stats-strip strong {
+  .tab-view .note-editor {
+    min-height: 480px;
+    padding: 0;
+  }
+  .tab-view .timer-panel {
+    min-height: 460px;
+    padding: 18px 12px;
+  }
+  .tab-view .timer-ring {
+    width: 240px;
+  }
+  .tab-view .focus-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .tab-view .focus-summary > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+  }
+  .tab-view .focus-summary > div:first-child strong {
+    margin: 0;
+    font-size: 30px;
+  }
+  .tab-view .stats-strip {
+    padding: 0;
+  }
+  .tab-view .stats-strip > div {
+    padding: 14px;
+  }
+  .tab-view .stats-strip strong {
     font-size: 22px;
+  }
+  .tab-view .meal-card-grid,
+  .tab-view .facility-grid {
+    grid-template-columns: 1fr;
+  }
+  .tab-view .upload-card {
+    flex-wrap: wrap;
+  }
+  .tab-view .file-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+  .tab-view .file-row strong {
+    white-space: normal;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -963,20 +675,24 @@
     transition: none;
   }
 }
+.tab-view .timer-duration-button,
+.tab-view .timer-duration-input {
+  font-size: 68px;
+  letter-spacing: -0.05em;
+}
+.tab-view .focus-summary > div:first-child {
+  flex: none;
+  min-height: 175px;
+}
+.tab-view .focus-summary .sync-note {
+  margin-top: 0 !important;
+}
 @media (max-width: 820px) {
-  .hub-panel-body {
-    height: auto;
-    max-height: 620px;
+  .tab-view .focus-summary > div:first-child {
+    min-height: 0;
   }
-  .hub-focus .hub-panel-body {
-    height: auto;
-    max-height: 490px;
-  }
-  .hub-panel.is-expanded .hub-panel-body {
-    max-height: none;
-  }
-  .hub-panel .stats-strip strong {
-    font-size: 20px;
-    white-space: normal;
+  .tab-view .timer-duration-button,
+  .tab-view .timer-duration-input {
+    font-size: 60px;
   }
 }
