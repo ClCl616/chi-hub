@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/sheet';
 
 const navigation = [
-  { href: '/', label: '홈', icon: LayoutDashboard },
+  { href: '/', label: '대시보드', icon: LayoutDashboard },
   { href: '/focus', label: '타이머', icon: TimerReset },
   { href: '/morning', label: '루틴', icon: MoonStar },
   { href: '/sleep', label: '수면', icon: BedDouble },
@@ -72,7 +72,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mobileLinks = navigation;
   function toggleSidebar() {
     const next = !sidebarExpanded;
-    window.localStorage.setItem(sidebarStorageKey, next ? 'expanded' : 'collapsed');
+    window.localStorage.setItem(
+      sidebarStorageKey,
+      next ? 'expanded' : 'collapsed',
+    );
     window.dispatchEvent(new Event(sidebarChangeEvent));
   }
   async function logout() {
@@ -81,12 +84,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
   return (
     <div className={`app-shell${sidebarExpanded ? '' : ' sidebar-collapsed'}`}>
+      <a className="skip-content" href="#workspace">
+        본문으로 건너뛰기
+      </a>
       <aside className="sidebar">
         <div className="sidebar-brand-row">
           <a className="brand" href="/" aria-label="CHI.HUB 홈">
             <span className="brand-mark">C</span>
             <span>
-              CHI.HUB<small>personal operating system</small>
+              CHI.HUB<small>내 하루의 작업 공간</small>
             </span>
           </a>
           <button
@@ -99,12 +105,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className="side-nav" aria-label="주 메뉴">
-          <p>Apps</p>
+          <p>내 공간</p>
           {navigation.map(({ href, label, icon: Icon }) => (
             <a
               className={pathname === href ? 'active' : ''}
               href={href}
               key={href}
+              aria-current={pathname === href ? 'page' : undefined}
             >
               <Icon size={19} />
               <span>{label}</span>
@@ -180,7 +187,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SheetContent>
         </Sheet>
       </div>
-      <main className="main-content">
+      <header className="workspace-topbar">
+        <div>
+          <span>내 공간</span>
+          <span aria-hidden="true">/</span>
+          <strong>
+            {navigation.find((item) => item.href === pathname)?.label ??
+              'CHI.HUB'}
+          </strong>
+        </div>
+        <a href="/calendar">
+          <CalendarDays size={16} /> 캘린더
+        </a>
+      </header>
+      <main className="main-content" id="workspace" tabIndex={-1}>
         {authState === 'checking' ? (
           <output className="auth-check">내 공간을 불러오는 중…</output>
         ) : (
@@ -200,6 +220,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={pathname === href ? 'active' : ''}
             href={href}
             key={href}
+            aria-current={pathname === href ? 'page' : undefined}
           >
             <Icon size={20} />
             <span>{label}</span>
