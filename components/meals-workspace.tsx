@@ -6,8 +6,6 @@ import type { CampusMealsResponse, SchoolId } from '@/lib/campus-meals';
 
 const schools: { id: SchoolId; name: string }[] = [
   { id: 'dju', name: '대전대학교' },
-  { id: 'cbnu', name: '충북대학교' },
-  { id: 'hufs', name: '한국외국어대학교' },
 ];
 const storageKey = 'chi-hub-university';
 
