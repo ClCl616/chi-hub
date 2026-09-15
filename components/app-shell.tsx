@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
+import { WorkspaceStatus } from '@/components/workspace-status';
 import {
   BedDouble,
   CalendarDays,
@@ -165,13 +166,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <div className="side-nav">
-          <p>내 공간</p>
           <TabsList className="workspace-tab-list" aria-label="작업 구분">
-            {navigation.map(({ id, label, icon: Icon }) => (
-              <TabsTrigger className="workspace-tab" key={id} value={id}>
-                <Icon size={19} />
-                <span>{label}</span>
-              </TabsTrigger>
+            {navigation.map(({ id, label, icon: Icon }, index) => (
+              <Fragment key={id}>
+                {[0, 4, 6].includes(index) && (
+                  <div className="nav-group-label">
+                    {index === 0
+                      ? '계획 · 집중'
+                      : index === 4
+                        ? '생활 관리'
+                        : '자료 · 정보'}
+                  </div>
+                )}
+                <TabsTrigger className="workspace-tab" value={id}>
+                  <Icon size={19} />
+                  <span>{label}</span>
+                </TabsTrigger>
+              </Fragment>
             ))}
           </TabsList>
         </div>
@@ -237,7 +248,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sheet>
       </header>
       <header className="workspace-topbar">
-        <span>개인 워크스페이스</span>
+        <div className="workspace-identity">
+          <span className="workspace-avatar">C</span>
+          <div>
+            <strong>내 워크스페이스</strong>
+            <span className={`connection-state ${authState}`}>
+              {authState === 'ready'
+                ? '연결됨'
+                : authState === 'checking'
+                  ? '연결 확인 중'
+                  : '데이터 연결 필요'}
+            </span>
+          </div>
+        </div>
+        {authState !== 'checking' && <WorkspaceStatus />}
         <time>
           {new Intl.DateTimeFormat('ko-KR', {
             month: 'long',

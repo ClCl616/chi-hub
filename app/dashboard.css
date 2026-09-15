@@ -687,7 +687,216 @@
 .tab-view .focus-summary .sync-note {
   margin-top: 0 !important;
 }
+/* Compact administrative layout, using the original paper / ink / lime palette. */
+.nav-group-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 22px 10px 7px;
+  color: #a1a699;
+  font-size: 11px;
+  font-weight: 600;
+}
+.nav-group-label:first-child {
+  margin-top: 0;
+}
+.nav-group-label::before {
+  content: '';
+  width: 3px;
+  height: 10px;
+  background: var(--lime);
+}
+.nav-group-label::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #34392f;
+}
+.workspace-topbar {
+  height: 88px;
+  gap: 24px;
+  background: var(--surface);
+}
+.workspace-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--lime);
+  color: var(--ink) !important;
+  font-size: 23px;
+  font-weight: 800;
+}
+.workspace-identity {
+  flex-shrink: 0;
+}
+.workspace-identity > div {
+  display: grid;
+  gap: 6px;
+}
+.connection-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-ink);
+  font-size: 11px;
+}
+.connection-state::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a1a699;
+}
+.connection-state.ready::before {
+  background: var(--lime-dark);
+}
+.workspace-metrics {
+  display: flex;
+  margin: 0 0 0 auto;
+  align-items: center;
+}
+.workspace-metrics > div {
+  min-width: 115px;
+  padding: 0 24px;
+  border-left: 1px solid var(--line);
+}
+.workspace-metrics dt {
+  font-size: 11px;
+  color: var(--muted-ink);
+}
+.workspace-metrics dd {
+  margin: 7px 0 0;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.workspace-topbar time {
+  white-space: nowrap;
+  font-size: 12px;
+}
+.main-content {
+  min-height: calc(100dvh - 88px);
+  padding: 24px 24px 40px;
+}
+.tab-workspace {
+  max-width: 1600px;
+}
+.tab-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.tab-heading::after {
+  content: '';
+  height: 1px;
+  background: var(--line);
+  flex: 1;
+}
+.tab-heading h1 {
+  font-size: 23px;
+}
+.tab-view .workspace-card {
+  padding: 20px;
+  border-radius: 9px;
+}
+.tab-view .section-title {
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--line);
+}
+.tab-view .section-title h2 {
+  font-size: 18px;
+}
+.tab-view .record-row {
+  border-radius: 6px;
+}
+.tab-view .calendar-layout,
+.tab-view .workspace-grid,
+.tab-view .notes-layout {
+  gap: 16px;
+}
+.view-focus:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(330px, 1.3fr) minmax(180px, 0.65fr) minmax(
+      260px,
+      1fr
+    );
+  gap: 16px;
+  align-items: start;
+}
+.view-focus .timer-workspace {
+  display: contents;
+}
+.view-focus .timer-panel {
+  min-height: 470px;
+  border-radius: 9px;
+}
+.view-focus .focus-summary {
+  gap: 14px;
+}
+.view-focus .focus-summary > div,
+.view-focus .sync-note {
+  border-radius: 9px;
+  padding: 20px;
+}
+.view-focus .focus-summary > div:first-child {
+  min-height: 190px;
+}
+.view-focus .focus-history {
+  margin: 0;
+  min-height: 470px;
+}
+.view-focus .focus-history .record-list {
+  max-height: 550px;
+  overflow-y: auto;
+}
+.view-focus .focus-summary > div:first-child strong {
+  font-size: 52px;
+}
+.tab-view .notes-layout {
+  height: calc(100dvh - 190px);
+}
+@media (min-width: 821px) and (max-width: 1250px) {
+  .workspace-topbar {
+    padding: 0 24px;
+    gap: 16px;
+  }
+  .workspace-metrics > div {
+    min-width: 85px;
+    padding: 0 15px;
+  }
+  .workspace-topbar time {
+    display: none;
+  }
+  .view-focus:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr) 200px;
+  }
+  .view-focus .focus-history {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
 @media (max-width: 820px) {
+  .view-focus:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .view-focus .focus-history {
+    min-height: 0;
+  }
+  .view-focus .focus-summary > div:first-child {
+    min-height: 0;
+  }
+  .tab-view .notes-layout {
+    height: auto;
+  }
+  .tab-view .workspace-card {
+    padding: 18px;
+  }
   .tab-view .focus-summary > div:first-child {
     min-height: 0;
   }

@@ -12,28 +12,40 @@ import { MealsWorkspace } from '@/components/meals-workspace';
 export function DashboardWorkspace() {
   return (
     <>
-      <TabsContent className="tab-view" value="focus" keepMounted>
+      <TabsContent className="tab-view view-focus" value="focus" keepMounted>
         <FocusTimer />
       </TabsContent>
-      <TabsContent className="tab-view" value="morning" keepMounted>
+      <TabsContent
+        className="tab-view view-morning"
+        value="morning"
+        keepMounted
+      >
         <MorningWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="calendar" keepMounted>
+      <TabsContent
+        className="tab-view view-calendar"
+        value="calendar"
+        keepMounted
+      >
         <CalendarWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="notes" keepMounted>
+      <TabsContent className="tab-view view-notes" value="notes" keepMounted>
         <NotesWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="sleep" keepMounted>
+      <TabsContent className="tab-view view-sleep" value="sleep" keepMounted>
         <SleepWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="workouts" keepMounted>
+      <TabsContent
+        className="tab-view view-workouts"
+        value="workouts"
+        keepMounted
+      >
         <WorkoutWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="files" keepMounted>
+      <TabsContent className="tab-view view-files" value="files" keepMounted>
         <FilesWorkspace />
       </TabsContent>
-      <TabsContent className="tab-view" value="meals" keepMounted>
+      <TabsContent className="tab-view view-meals" value="meals" keepMounted>
         <MealsWorkspace />
       </TabsContent>
     </>
