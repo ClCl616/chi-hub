@@ -5,13 +5,27 @@
 ## 새 PC / 새 Codex 채팅에서 시작하기
 
 1. 이 문서와 AGENTS.md를 끝까지 읽고 실제 git status, 최근 커밋, 관련 소스를 확인한다. 서버 설정이나 migration을 처음부터 다시 설치하지 않는다.
-2. **GitHub clone/pull만으로는 최신 작업을 받을 수 없다.** 2026-09-16 원격 조회 결과 origin/main은 c977a79이며, 이번 Windows 전환/브랜드 변경은 로컬과 서버에만 전달했다. GitHub push는 별도 사용자 요청이 있어야 한다.
-3. 최신 소스는 아래 Git bundle로 복원한다. bundle에는 추적된 소스와 Git 이력만 포함되며 환경 파일, SSH 키, node_modules, 빌드, work/ QA 산출물은 포함되지 않는다.
+2. **2026-09-16 사용자 요청으로 main을 GitHub에 push했다.** Windows 전환/브랜드 변경/인수인계 문서는 GitHub clone 또는 pull로 받을 수 있다. 이후 push도 별도 사용자 요청 범위에서 수행한다.
+3. 최신 소스는 GitHub main에서 받으며, Git bundle은 대체 전달 수단이다. bundle에는 추적된 소스와 Git 이력만 포함되며 환경 파일, SSH 키, node_modules, 빌드, work/ QA 산출물은 포함되지 않는다.
 4. 새 PC에 Git과 Node 24 LTS를 설치하고, Tailscale 접근 및 OpenSSH 인증을 별도로 구성한다. chi-server는 현재 PC의 SSH 별칭이므로 새 PC에 자동으로 생기지 않는다. 서버 호스트/사용자/인증 정보를 안전하게 설정하고 ssh chi-server 접속부터 확인한다. 비밀번호나 개인 키를 채팅에 요청하지 않는다.
 5. 저장소에서 npm.cmd ci 실행. 실제 앱 개발 시 .env.example을 참고해 새 PC 전용 .env.local을 별도 준비하고 로컬 사이트 주소를 사용한다. 기존 파일은 덮어쓰지 않는다. 운영 Supabase 값을 쓰면 로컬 CRUD도 실데이터를 변경한다.
 6. 다음 작업은 실제 로그인/OAuth 검증과 계획된 재부팅 후 복구 확인이다. 완료 보고가 없으므로 이미 성공했다고 가정하지 않는다.
 
 ### 최신 소스 가져오기 (새 PC PowerShell)
+
+새 작업 폴더의 상위 디렉터리에서 실행한다:
+
+~~~powershell
+git clone https://github.com/ClCl616/chi-hub.git
+Set-Location chi-hub
+git status -sb
+git log -5 --oneline
+npm.cmd ci
+~~~
+
+기존 저장소는 먼저 사용자 변경을 보존하고 현재 브랜치를 확인한 뒤 main에서 git pull --ff-only origin main으로 갱신한다. 분기가 갈라졌다면 강제 덮어쓰지 않는다.
+
+### 대체 방법: Git bundle
 
 서버에는 이 문서의 커밋까지 포함한 C:/Services/chi-hub-windows.bundle을 유지한다.
 아래는 새 빈 작업 폴더의 상위 디렉터리에서 실행한다. 대상 chi-hub가 이미 있으면 clone하지 않는다.
@@ -166,7 +180,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 
 ## 현재 운영 상태 / 다음 단계
 
-문서 정리 시 실제 재확인: 로컬/서버 소스 HEAD 611c266, 양쪽 worktree clean. 아래 실행 빌드와 소스 HEAD 차이는 문서 전용 커밋 때문이며 앱 미배포 변경이 아니다. 이 문서 정리 커밋은 추가로 양쪽에 동기화한다.
+인수인계 문서 커밋 9a5e25c까지 로컬/서버 소스 동기화 후 사용자 요청으로 GitHub main에 push했다. 후속 문서 정리도 함께 동기화한다. 아래 실행 빌드와 소스 HEAD 차이는 문서 전용 커밋 때문이며 앱 미배포 변경이 아니다. 정확한 HEAD는 git log로 확인한다.
 
 - CHI Toolbox 명칭/도메인 전환 완료. 서버 runtime은 3edc62f 빌드 릴리스 20260916-170601-382-3edc62fdf13b이며 CHI-HUB-App 실행 중. 이전 릴리스는 rollback용으로 보존.
 - Caddy 2.11.4, CHI-HUB-Caddy 자동 시작/복구 서비스. 새 Caddyfile 검증·reload 완료. 기존 설정은 서버 Caddyfile.previous에 보존.
@@ -175,7 +189,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - Supabase 설정 변경은 사용자 완료 확인이며 콘솔을 직접 검증한 것은 아니다. 실제 이메일/Google 로그인, 세션 유지, 기존 데이터 조회는 사용자 계정으로 확인 필요. 코드 없는 callback redirect 검증은 실제 OAuth 성공 검증과 다르다.
 - 계획된 서버 재부팅 시 CHI-HUB-App/Caddy 자동 복구와 공개 health를 확인한다. 사용자 원격 작업을 끊을 수 있어 임의로 재부팅하지 않는다.
 - 직전 배포의 npm audit 0건. 실제 사용자 데이터 생성·변경·삭제 없음.
-- GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 이전 dummy 시험 산출물이며 task/프로세스는 제거했다.
+- GitHub origin/main에 이번 작업을 push했다. 서버의 validation-source/runtime는 이전 dummy 시험 산출물이며 task/프로세스는 제거했다.
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
 ## 최근 핵심 이력
