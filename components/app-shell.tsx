@@ -153,7 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="brand">
             <span className="brand-mark">C</span>
             <span>
-              CHI.HUB<small>나의 작업 공간</small>
+              CHI TOOLBOX<small>나의 일상을 위한 도구 상자</small>
             </span>
           </div>
           <button
@@ -210,7 +210,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </button>
       <header className="mobile-header">
         <div className="mobile-brand">
-          <span className="brand-mark">C</span>CHI.HUB
+          <span className="brand-mark">C</span>CHI TOOLBOX
         </div>
         <Sheet>
           <SheetTrigger

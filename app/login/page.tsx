@@ -4,7 +4,7 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-card auth-card">
         <a className="public-brand" href="/">
-          <span className="brand-mark">C</span> CHI.HUB
+          <span className="brand-mark">C</span> CHI TOOLBOX
         </a>
         <div className="auth-intro">
           <p className="eyebrow">PRIVATE SPACE</p>

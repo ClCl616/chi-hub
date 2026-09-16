@@ -28,7 +28,7 @@
 - Supabase schema 변경은 새 migration으로 추가하고, 사용자 데이터 테이블과 Storage에 RLS/정책을 유지한다.
 - 변경 후 로컬 또는 적절한 자동 검증을 먼저 수행한다.
 - 사용자가 변경을 요청하고 검증이 끝나면 로컬 커밋 후 Windows 운영 서버에 검증된 버전을 전달한다. 배포 준비/검증은 자율적으로 수행하되 환경 값 등 누락된 필수 설정은 사용자에게 요청한다.
-- 2026-09-16 사용자 결정: 운영은 집의 Windows 서버, 도메인은 chi-hub.kro.kr, Tailscale/SSH는 관리 전용이다. Sites에 새로 게시하지 않는다. GitHub `origin` push는 사용자가 명시적으로 요청한 경우에만 허용한다. 승인된 서버 전달에는 Git bundle과 SSH를 사용할 수 있다.
+- 2026-09-16 사용자 결정: 운영은 집의 Windows 서버, 도메인은 chitoolbox.com, Tailscale/SSH는 관리 전용이다. Sites에 새로 게시하지 않는다. GitHub `origin` push는 사용자가 명시적으로 요청한 경우에만 허용한다. 승인된 서버 전달에는 Git bundle과 SSH를 사용할 수 있다.
 - 운영 앱은 loopback에서만 실행하고 Caddy가 HTTPS를 담당한다. production 빌드만 공개하며 개발 서버를 포트포워딩하지 않는다. 서버 환경 파일과 릴리스는 공개 소스나 로그에 포함하지 않는다.
 - 기존 dirty worktree 변경은 사용자 소유로 간주하고 덮어쓰거나 삭제하지 않는다.
 

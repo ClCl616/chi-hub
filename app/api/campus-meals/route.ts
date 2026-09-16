@@ -27,7 +27,7 @@ const CBNU_SOURCE = 'https://www.cbnucoop.com/service/restaurant/';
 const HUFS_SOURCE = 'https://aidata.hufs.ac.kr/hufs/11316/subview.do';
 const FETCH_HEADERS = {
   Accept: 'text/html,application/xhtml+xml',
-  'User-Agent': 'CHI.HUB campus meal reader/1.0',
+  'User-Agent': 'CHI Toolbox campus meal reader/1.0',
 };
 
 function decodeHtml(value: string) {

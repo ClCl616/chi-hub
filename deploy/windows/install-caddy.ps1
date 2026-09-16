@@ -29,7 +29,7 @@ foreach ($dir in @('data','logs')) {
     & icacls.exe (Join-Path $root $dir) /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-19:(OI)(CI)M' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Caddy data permissions failed.' }
 }
-New-Service -Name 'CHI-HUB-Caddy' -DisplayName 'CHI.HUB HTTPS' -BinaryPathName "`"$exe`" run --config `"$config`" --adapter caddyfile" -StartupType Automatic | Out-Null
+New-Service -Name 'CHI-HUB-Caddy' -DisplayName 'CHI Toolbox HTTPS' -BinaryPathName "`"$exe`" run --config `"$config`" --adapter caddyfile" -StartupType Automatic | Out-Null
 & sc.exe config CHI-HUB-Caddy obj= 'NT AUTHORITY\LocalService'
 if ($LASTEXITCODE -ne 0) { throw 'Failed to set service identity; do not start service.' }
 & sc.exe failure CHI-HUB-Caddy reset= 86400 actions= restart/5000/restart/15000/restart/60000

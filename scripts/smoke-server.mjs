@@ -8,7 +8,7 @@ const port = '13001';
 const base = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['scripts/start-server.mjs'], {
   env: { ...process.env, PORT: port, NEXT_PUBLIC_SUPABASE_URL: 'https://smoke-test.invalid',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'smoke-test-anon-key', NEXT_PUBLIC_SITE_URL: 'https://chi-hub.kro.kr' },
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'smoke-test-anon-key', NEXT_PUBLIC_SITE_URL: 'https://chitoolbox.com' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let output = '';
@@ -37,9 +37,9 @@ try {
   assert.ok([301, 302, 307, 308].includes(oldRoute.status));
   assert.ok(oldRoute.headers.get('location')?.endsWith('/?view=meals'));
   const callback = await fetch(`${base}/auth/callback?next=%2F%3Fview%3Dmeals`, {
-    redirect: 'manual', headers: { 'x-forwarded-host': 'chi-hub.kro.kr', 'x-forwarded-proto': 'https' },
+    redirect: 'manual', headers: { 'x-forwarded-host': 'chitoolbox.com', 'x-forwarded-proto': 'https' },
   });
-  assert.equal(callback.headers.get('location'), 'https://chi-hub.kro.kr/?view=meals');
+  assert.equal(callback.headers.get('location'), 'https://chitoolbox.com/?view=meals');
   const malicious = await fetch(`${base}/auth/callback?next=//evil.invalid`, {
     redirect: 'manual', headers: { 'x-forwarded-host': 'evil.invalid' },
   });

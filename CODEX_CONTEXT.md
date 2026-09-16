@@ -4,12 +4,13 @@
 
 ## 프로젝트와 사용자 결정
 
-CHI.HUB는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 수면, 운동, 비공개 드라이브, 학식을 제공한다.
+CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 수면, 운동, 비공개 드라이브, 학식을 제공한다.
 
 - 2026-09-16 사용자 결정: Sites 계정 종속을 벗어나 **집의 상시 가동 Windows PC에서 운영**한다.
-- 서비스 주소: `https://chi-hub.kro.kr`. Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
+- 새 서비스 주소: `https://chitoolbox.com` (DNS 연결 진행 중). Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
 - 여러 PC(집/랩실/노트북)에서 개발하고 검증된 Git 커밋만 운영 서버에 전달한다.
 - 기존 Supabase Auth/DB/Storage를 유지한다. DB/schema 변경이나 데이터 이전은 이번 전환에 없다.
+- 2026-09-16 명칭 변경 승인: 앱 이름 CHI Toolbox, 화면 로고 CHI TOOLBOX, 소개 문구 “나의 일상을 위한 도구 상자”. 기존 C 아이콘/기능/데이터 유지. 내부 package, 저장 키, 서버 폴더와 작업/서비스 이름은 chi-hub/CHI-HUB를 유지한다.
 - 기존 밝은 배경·검정·라임 색상을 유지한다. **8개 기능 중 선택한 화면 하나만 표시**하며 별도 요약 탭이나 전체 패널 나열로 되돌리지 않는다.
 - 학식 UI는 대전대학교만 유지한다. 다른 학교 버튼을 임의로 복원하지 않는다.
 
@@ -19,7 +20,7 @@ CHI.HUB는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일
 - 서버 소스 경로: `C:\Services\chi-hub`. SSH alias: `chi-server` (개인 키/계정 정보는 별도 관리).
 - 서버는 Node 24.21.0, npm 11.19.0, Git 설치 및 clone 완료. 관리자 SSH 접근 확인.
 - 서버 런타임: `C:\Services\chi-hub-runtime`; releases, active.txt, previous.txt, logs를 사용한다.
-- 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, DNS A 레코드 연결 확인. IP/MAC 값은 기록하지 않는다.
+- 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, 이전 kro.kr DNS A 레코드 연결 확인. 새 .com은 사용자 DNS 설정 대기. IP/MAC 값은 기록하지 않는다.
 - 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
 - 개발 PC에 `.env.local` 없음. 서버는 사용자가 입력한 설정으로 build 및 Supabase Auth settings 조회 HTTP 200을 확인했다. 실제 값은 출력하지 않았다.
 - 개발 PC의 node는 Codex bundled runtime이고 npm은 PATH에 없다. 임시 `work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 node로 실행했다. 서버에는 표준 npm.cmd가 있다.
@@ -142,6 +143,14 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - `606cf7c`: 모든 기능 나열에서 상태 보존 단일 기능 탭으로 전환.
 - 이전 Sites 주소는 `https://chi-hub-personal.nolsup0305.chatgpt.site`; project_not_found로 최근 UI/학식 미게시 상태였음. 이제 해당 게시 복구는 작업 목표가 아니다.
 
-## 2026-09-16 HTTPS 발급 대기
+## 이전 도메인 HTTPS 제한 / 새 도메인 전환
 
-Caddy 실행 후 외부 HTTP 요청은 HTTPS로 308 redirect되어 집 서버까지 연결됨을 확인했다. HTTPS 인증서는 아직 미발급이다. Let's Encrypt가 공유 등록 도메인 `kro.kr`의 7일간 50개 발급 한도(HTTP 429)를 반환했다. 서버 로그의 retry-after는 **2026-09-16 19:49:51 KST**이며 공유 한도이므로 그때 발급 성공을 보장하지 않는다. Caddy는 자체 자동 재시도 중이다. 임시 자체 서명 인증서나 HTTP 로그인으로 우회하지 않았다. 다른 CA(ZeroSSL 등) 사용 시 별도 계정/이메일 또는 EAB 설정이 필요할 수 있다.
+이전 chi-hub.kro.kr은 공유 kro.kr 등록 도메인의 Let's Encrypt 발급 한도(429)로 인증서를 발급받지 못했다. 사용자가 chitoolbox.com을 선택하여 전환한다. 새 도메인은 구매 당시 주차용 A 레코드 2개가 있어 집 서버 공인 IP로 교체하도록 안내했다. DNS/인증서/로그인 복귀는 완료 여부를 각각 확인해야 한다.
+
+## 명칭/도메인 변경 진행
+
+- CHI Toolbox 명칭, 화면 로고/알림/PWA/메타데이터 변경. 기존 색감의 새 공유 이미지 public/og-toolbox.png 사용. 이전 이미지는 보존.
+- 새 도메인으로 Caddy 설정과 운영 문서, proxy smoke 기준 변경. 실제 Caddy 반영과 서버 환경 재빌드가 필요하다.
+- 로컬 typecheck/build/HTTP smoke 통과. dummy API로 1440/390px 화면과 manifest/title/login/OG 검증. 운영 데이터 변경 없음.
+- 사용자가 DNS 설정 중. Supabase Site URL/Redirect URLs 새 도메인 등록은 사용자 완료 확인. 실제 로그인은 별도 검증 필요.
+- 도메인이 바뀌므로 기존 브라우저 로그인/로컬 타이머·사이드바 상태는 자동 이전되지 않는다. Supabase 저장 데이터는 기존 계정으로 접근한다.

@@ -1,4 +1,4 @@
-# CHI.HUB
+# CHI Toolbox
 
 한국어 모바일 우선 개인용 PWA. 집중 타이머, 루틴·할 일, 캘린더, 수면, 운동, 메모, 비공개 드라이브, 대전대학교 학식을 제공합니다.
 
@@ -35,7 +35,7 @@ npm.cmd start
 
 ## 운영
 
-운영 대상은 집의 Windows PC, 주소는 https://chi-hub.kro.kr 입니다.
+운영 대상은 집의 Windows PC, 주소는 https://chitoolbox.com 입니다.
 개발은 여러 PC에서 하고, 검증된 커밋만 서버에 전달합니다. GitHub push는 사용자 요청 시 수행합니다.
 Tailscale/SSH는 관리용이며 서비스 사용자는 도메인으로 접속합니다.
 

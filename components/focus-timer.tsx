@@ -117,7 +117,7 @@ export function FocusTimer() {
           savedEnd.current = completedEnd;
           setCompletion(mode);
           if ('Notification' in window && Notification.permission === 'granted')
-            new Notification('CHI.HUB', {
+            new Notification('CHI Toolbox', {
               body:
                 mode === 'focus'
                   ? '집중 세션을 완료했어요.'
