@@ -1,3 +1,15 @@
+{
+    storage file_system {
+        root C:/Services/chi-hub-caddy/data
+    }
+    log {
+        output file C:/Services/chi-hub-caddy/logs/caddy.log {
+            roll_size 10MiB
+            roll_keep 5
+        }
+    }
+}
+
 chi-hub.kro.kr {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3000

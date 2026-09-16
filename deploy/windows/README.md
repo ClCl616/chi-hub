@@ -36,13 +36,11 @@ active.txt를 갱신한다. 기존 앱은 빌드 중 계속 실행된다. 변경
 
 ## HTTPS (앱 로컬 검증 후)
 
-1. 공식 Caddy Windows 배포본을 설치한다: https://caddyserver.com/docs/install
-2. `Caddyfile`을 Caddy 설정 경로에 복사하고 설정 검증을 실행한다.
+1. 관리자 PowerShell에서 `powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\install-caddy.ps1` 실행. 공식 Caddy 2.11.4 Windows x64 zip의 SHA-512 checksum을 검증하고 설치한다. 실패 후 같은 설치를 재개할 때만 디렉터리를 확인하고 `-Resume`을 사용한다.
+2. Caddy 설정은 `C:\Services\chi-hub-caddy\Caddyfile`, 인증서 저장은 data, 로그는 logs에 둔다. installer가 설정 검증, LOCAL SERVICE의 CHI-HUB-Caddy 자동 시작 서비스 및 장애 재시작을 구성한다. 초기에는 서비스를 시작하지 않는다.
 3. 도메인 A 레코드를 집의 공인 IPv4로 유지한다. 잘못된 AAAA 레코드를 만들지 않는다.
 4. 공유기 TCP 80/443을 서버 내부 IP의 80/443으로 전달한다. Windows 방화벽도 해당 포트를 허용한다.
-5. Caddy를 영구 Windows 서비스로 등록하고 자동 시작 및 실패 시 재시작을 설정한다.
-   공식 Windows 서비스 안내: https://caddyserver.com/docs/running#sc-exe
-   서비스 계정에 Caddy 설정 읽기 및 인증서 데이터 디렉터리 쓰기 권한을 부여한다.
+5. 공유기/방화벽 설정 후 `Start-Service CHI-HUB-Caddy` 실행. 인증서는 Caddy가 발급/갱신한다. 오류는 `C:\Services\chi-hub-caddy\logs\caddy.log` 확인. 공식 Windows 서비스 안내: https://caddyserver.com/docs/running#sc-exe
 6. 앱은 127.0.0.1:3000만 수신한다. 3000/13000을 포트포워딩하지 않는다.
 7. Supabase Authentication > URL Configuration에서 Site URL을 새 HTTPS 주소로 설정한다.
    Redirect URLs에 `https://chi-hub.kro.kr/auth/callback`과 코드가 쓰는 `?next=...` 경로를 허용한다
@@ -98,3 +96,12 @@ DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변
 - 이전 esbuild/sharp/workerd 설치 스크립트 안내는 해당 Cloudflare 의존성이 제거되어 더 이상 적용되지 않는다.
 - 계정별 RLS와 앱 로그인은 유지된다. Sites의 별도 owner-only 접근 관문은 새 도메인에 적용되지 않는다.
   Supabase 신규 가입 허용 여부는 운영자가 기존 프로젝트의 Auth 설정에서 관리한다.
+
+## 2026-09-16 서버 적용 상태
+
+- 운영 앱: 67d0ded 소스로 빌드/설치, CHI-HUB-App 실행 중, loopback health 확인.
+- 서버 npm audit 0건. Supabase Auth 설정 조회 HTTP 200. 실제 사용자 로그인은 아직 미검증.
+- Caddy 2.11.4 설치/설정 검증 완료, 서비스 자동 시작/복구 설정 완료, 현재 중지 상태.
+- Windows 방화벽 CHI-HUB-Web: Caddy 프로그램에만 TCP 80/443 inbound 허용.
+- 공유기 포트포워딩, Caddy 시작/인증서 발급, Supabase callback 및 외부 접속 검증이 다음 단계.
+- 서버 별도 validation-source/runtime에 dummy 테스트 빌드가 남아 있다. validation task와 프로세스는 제거했다. 실제 키/운영 데이터는 테스트에 사용하지 않았다.

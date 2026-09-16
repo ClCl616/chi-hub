@@ -21,7 +21,7 @@ CHI.HUB는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일
 - 서버 런타임: `C:\Services\chi-hub-runtime`; releases, active.txt, previous.txt, logs를 사용한다.
 - 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, DNS A 레코드 연결 확인. IP/MAC 값은 기록하지 않는다.
 - 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
-- 개발 PC에 `.env.local` 없음. 서버에 입력 양식만 준비했으며 실제 설정 완료는 별도 확인한다.
+- 개발 PC에 `.env.local` 없음. 서버는 사용자가 입력한 설정으로 build 및 Supabase Auth settings 조회 HTTP 200을 확인했다. 실제 값은 출력하지 않았다.
 - 개발 PC의 node는 Codex bundled runtime이고 npm은 PATH에 없다. 임시 `work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 node로 실행했다. 서버에는 표준 npm.cmd가 있다.
 - 현재 저장소 `core.longpaths=true`. work/에 과거 임시 QA 파일이 있으나 공식 테스트 스위트가 아니다.
 
@@ -127,9 +127,10 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 
 ## 현재 진행 중 / 다음 단계
 
-- Windows 서버 전환 설정과 취약점 정리 구현 완료, 서버 전달/설치 검증 진행 중.
-- 서버 Supabase 설정 입력을 사용자에게 안내했다. 값 자체를 요청하지 않았다.
-- 서버에서 새 소스 설치/빌드, task 실행, Caddy 설치/HTTPS, router TCP 80/443, Supabase callback 등록 및 실제 로그인 확인 필요.
+- Windows 전환 및 보안 업데이트 완료. SSH/bundle로 서버 소스 전달, npm ci/audit 0건, 67d0ded 빌드 릴리스와 CHI-HUB-App 자동 시작 task 설치/실행 완료. loopback health와 Supabase Auth settings HTTP 200 확인.
+- Caddy 2.11.4 공식 archive SHA-512 검증/설치/config validate 완료. CHI-HUB-Caddy는 LOCAL SERVICE의 자동 시작/실패 재시작 서비스로 등록했으며 현재 중지 상태. Windows CHI-HUB-Web 방화벽은 해당 실행 파일의 TCP 80/443에만 허용.
+- 다음: 공유기 TCP 80/443 포트포워딩 → Caddy 시작/인증서 발급 → Supabase callback 등록 → 외부 HTTPS와 실제 로그인 → 재부팅 후 복구 확인.
+- 이번 소스는 로컬 커밋과 서버 bundle 동기화만 했다. GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 dummy 시험 산출물이며 task/프로세스는 제거했다.
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
 ## 최근 핵심 이력
