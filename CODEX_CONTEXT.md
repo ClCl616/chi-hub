@@ -2,6 +2,43 @@
 
 > 마지막 정리: 2026-09-16 (Asia/Seoul). 실제 코드와 Git 상태를 먼저 확인한다.
 
+## 새 PC / 새 Codex 채팅에서 시작하기
+
+1. 이 문서와 AGENTS.md를 끝까지 읽고 실제 git status, 최근 커밋, 관련 소스를 확인한다. 서버 설정이나 migration을 처음부터 다시 설치하지 않는다.
+2. **GitHub clone/pull만으로는 최신 작업을 받을 수 없다.** 2026-09-16 원격 조회 결과 origin/main은 c977a79이며, 이번 Windows 전환/브랜드 변경은 로컬과 서버에만 전달했다. GitHub push는 별도 사용자 요청이 있어야 한다.
+3. 최신 소스는 아래 Git bundle로 복원한다. bundle에는 추적된 소스와 Git 이력만 포함되며 환경 파일, SSH 키, node_modules, 빌드, work/ QA 산출물은 포함되지 않는다.
+4. 새 PC에 Git과 Node 24 LTS를 설치하고, Tailscale 접근 및 OpenSSH 인증을 별도로 구성한다. chi-server는 현재 PC의 SSH 별칭이므로 새 PC에 자동으로 생기지 않는다. 서버 호스트/사용자/인증 정보를 안전하게 설정하고 ssh chi-server 접속부터 확인한다. 비밀번호나 개인 키를 채팅에 요청하지 않는다.
+5. 저장소에서 npm.cmd ci 실행. 실제 앱 개발 시 .env.example을 참고해 새 PC 전용 .env.local을 별도 준비하고 로컬 사이트 주소를 사용한다. 기존 파일은 덮어쓰지 않는다. 운영 Supabase 값을 쓰면 로컬 CRUD도 실데이터를 변경한다.
+6. 다음 작업은 실제 로그인/OAuth 검증과 계획된 재부팅 후 복구 확인이다. 완료 보고가 없으므로 이미 성공했다고 가정하지 않는다.
+
+### 최신 소스 가져오기 (새 PC PowerShell)
+
+서버에는 이 문서의 커밋까지 포함한 C:/Services/chi-hub-windows.bundle을 유지한다.
+아래는 새 빈 작업 폴더의 상위 디렉터리에서 실행한다. 대상 chi-hub가 이미 있으면 clone하지 않는다.
+
+~~~powershell
+scp chi-server:C:/Services/chi-hub-windows.bundle ./chi-hub-windows.bundle
+git clone -b main ./chi-hub-windows.bundle chi-hub
+Set-Location chi-hub
+git remote set-url origin https://github.com/ClCl616/chi-hub.git
+git status -sb
+git log -5 --oneline
+npm.cmd ci
+~~~
+
+bundle에는 HEAD 참조를 따로 넣지 않으므로 clone 시 -b main을 지정한다.
+기존 저장소는 작업을 보존한 뒤 bundle에서 git fetch <bundle경로> main, git merge --ff-only FETCH_HEAD로 동기화한다.
+분기가 갈라졌거나 사용자 변경이 있으면 강제 reset/덮어쓰기를 하지 않는다. 서버 접근이 없으면 현재 개발 PC의 outputs/chi-hub-windows.bundle을 안전하게 전달받아 같은 방식으로 복원한다.
+GitHub의 원격 추적 표시는 bundle에서 복원한 직후 실제 GitHub 상태와 다를 수 있으므로 필요하면 git fetch origin으로 갱신한다.
+
+### 실행과 검증
+
+- 로컬 실행: npm.cmd run dev -- --hostname 127.0.0.1 --port 3000. 환경 파일 준비 후 사용한다.
+- 코드 변경: npm.cmd run typecheck, 관련 lint/화면 검증, npm.cmd run build. 전체 lint의 기존 진단은 아래 참고.
+- scripts/smoke-server.mjs는 파일 상단의 dummy 설정과 동일한 환경으로 빌드한 산출물에만 실행한다. 운영 설정 빌드에 섞어 쓰지 않는다.
+- 운영 반영: 로컬 커밋 → bundle/SSH 전달 → 서버 clean worktree 확인 및 fast-forward → deploy/windows/deploy.ps1. 상세 명령은 deploy/windows/README.md.
+- 문서만 바꾸면 서버 소스 동기화만 하고 앱 재빌드/재시작은 하지 않는다.
+
 ## 프로젝트와 사용자 결정
 
 CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 수면, 운동, 비공개 드라이브, 학식을 제공한다.
@@ -19,6 +56,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 개발 PC 경로: `C:\Users\AIDIS3\Archive\Projects\chi-hub`.
 - 서버 소스 경로: `C:\Services\chi-hub`. SSH alias: `chi-server` (개인 키/계정 정보는 별도 관리).
 - 서버는 Node 24.21.0, npm 11.19.0, Git 설치 및 clone 완료. 관리자 SSH 접근 확인.
+- Caddy 경로: `C:\Services\chi-hub-caddy`; Caddyfile, data(인증서), logs를 사용한다. Windows 방화벽 CHI-HUB-Web은 Caddy 실행 파일의 TCP 80/443만 허용한다.
 - 서버 런타임: `C:\Services\chi-hub-runtime`; releases, active.txt, previous.txt, logs를 사용한다.
 - 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, 새 .com DNS A 레코드와 공개 HTTPS 연결 확인. IP/MAC 값은 기록하지 않는다.
 - 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
@@ -114,7 +152,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 
 ## 검증 / 알려진 문제
 
-2026-09-16 Windows 운영 전환 소스:
+2026-09-16 작업에서 수행한 검증 기록이다. 아래 audit/build/UI 결과를 문서 정리 때마다 다시 실행한 것으로 해석하지 않는다.
 
 - npm audit **0건**. Cloudflare 계열 제거, React/Vinext/Vite/RSC 보안 업데이트, undici 잠금 버전 갱신.
 - TypeScript 검사 성공. production standalone 빌드 성공.
@@ -128,11 +166,15 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 
 ## 현재 운영 상태 / 다음 단계
 
+문서 정리 시 실제 재확인: 로컬/서버 소스 HEAD 611c266, 양쪽 worktree clean. 아래 실행 빌드와 소스 HEAD 차이는 문서 전용 커밋 때문이며 앱 미배포 변경이 아니다. 이 문서 정리 커밋은 추가로 양쪽에 동기화한다.
+
 - CHI Toolbox 명칭/도메인 전환 완료. 서버 runtime은 3edc62f 빌드 릴리스 20260916-170601-382-3edc62fdf13b이며 CHI-HUB-App 실행 중. 이전 릴리스는 rollback용으로 보존.
 - Caddy 2.11.4, CHI-HUB-Caddy 자동 시작/복구 서비스. 새 Caddyfile 검증·reload 완료. 기존 설정은 서버 Caddyfile.previous에 보존.
-- DNS 연결 및 공개 HTTPS 인증서 검증 성공. HTTP→HTTPS 308, health/login/manifest/공유 이미지 200, 미인증 파일 API 401, 새 도메인 callback 복귀 확인.
-- Supabase 설정 변경은 사용자 완료 확인. 다음: 실제 이메일/Google 로그인 확인, 계획된 재부팅 시 앱/Caddy 복구 확인.
-- 로컬/서버 npm audit 0건. 실제 사용자 데이터 생성·변경·삭제 없음.
+- 문서 정리 시 CHI-HUB-App/Caddy Running, loopback health 정상 및 공개 HTTPS health/login/manifest 200 재확인.
+- 직전 배포에서 DNS 연결 및 공개 HTTPS 인증서 검증 성공. HTTP→HTTPS 308, health/login/manifest/공유 이미지 200, 미인증 파일 API 401, 새 도메인 callback 복귀 확인.
+- Supabase 설정 변경은 사용자 완료 확인이며 콘솔을 직접 검증한 것은 아니다. 실제 이메일/Google 로그인, 세션 유지, 기존 데이터 조회는 사용자 계정으로 확인 필요. 코드 없는 callback redirect 검증은 실제 OAuth 성공 검증과 다르다.
+- 계획된 서버 재부팅 시 CHI-HUB-App/Caddy 자동 복구와 공개 health를 확인한다. 사용자 원격 작업을 끊을 수 있어 임의로 재부팅하지 않는다.
+- 직전 배포의 npm audit 0건. 실제 사용자 데이터 생성·변경·삭제 없음.
 - GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 이전 dummy 시험 산출물이며 task/프로세스는 제거했다.
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
