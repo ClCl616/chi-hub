@@ -1,357 +1,141 @@
 # Project Context
 
-> 마지막 정리: 2026-09-16 (Asia/Seoul)
->
-> 이 문서는 대화 로그의 사본이 아니라, 새 PC의 새 Codex 세션이 실제 코드와 함께 읽고 개발을 이어가기 위한 인수인계 문서다. 항상 실제 코드와 Git 상태를 먼저 확인하고, 불일치하면 코드를 기준으로 이 문서를 갱신한다.
+> 마지막 정리: 2026-09-16 (Asia/Seoul). 실제 코드와 Git 상태를 먼저 확인한다.
 
-## 프로젝트 개요
+## 프로젝트와 사용자 결정
 
-CHI.HUB는 한 사용자의 일상 기록과 생산성 도구를 한곳에 모은 모바일 우선 개인용 라이프 허브다. 집중 타이머, 반복 루틴, 데일리 할 일, 수면, 캘린더, 운동, 메모, 비공개 드라이브, 대학교 학식 정보를 제공한다.
+CHI.HUB는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 수면, 운동, 비공개 드라이브, 학식을 제공한다.
 
-- 기본 UI 언어: 한국어
-- 운영 형태: 로그인 후 사용하는 개인용 PWA
-- 운영 사이트: `https://chi-hub-personal.nolsup0305.chatgpt.site`
-- Sites project id: `appgprj_6a96dbc41abc819195b2b881775473ee`
-- 운영 데이터: 외부 Supabase 프로젝트의 Auth, PostgreSQL, Storage 사용
-- 로컬 기본 주소: `http://127.0.0.1:3000`
+- 2026-09-16 사용자 결정: Sites 계정 종속을 벗어나 **집의 상시 가동 Windows PC에서 운영**한다.
+- 서비스 주소: `https://chi-hub.kro.kr`. Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
+- 여러 PC(집/랩실/노트북)에서 개발하고 검증된 Git 커밋만 운영 서버에 전달한다.
+- 기존 Supabase Auth/DB/Storage를 유지한다. DB/schema 변경이나 데이터 이전은 이번 전환에 없다.
+- 기존 밝은 배경·검정·라임 색상을 유지한다. **8개 기능 중 선택한 화면 하나만 표시**하며 별도 요약 탭이나 전체 패널 나열로 되돌리지 않는다.
+- 학식 UI는 대전대학교만 유지한다. 다른 학교 버튼을 임의로 복원하지 않는다.
 
-## 개발 환경
+## 저장소 / 환경
 
-### 새 채팅에서 먼저 확인할 인수인계 요약
+- 개발 PC 경로: `C:\Users\AIDIS3\Archive\Projects\chi-hub`.
+- 서버 소스 경로: `C:\Services\chi-hub`. SSH alias: `chi-server` (개인 키/계정 정보는 별도 관리).
+- 서버는 Node 24.21.0, npm 11.19.0, Git 설치 및 clone 완료. 관리자 SSH 접근 확인.
+- 서버 런타임: `C:\Services\chi-hub-runtime`; releases, active.txt, previous.txt, logs를 사용한다.
+- 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, DNS A 레코드 연결 확인. IP/MAC 값은 기록하지 않는다.
+- 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
+- 개발 PC에 `.env.local` 없음. 서버에 입력 양식만 준비했으며 실제 설정 완료는 별도 확인한다.
+- 개발 PC의 node는 Codex bundled runtime이고 npm은 PATH에 없다. 임시 `work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 node로 실행했다. 서버에는 표준 npm.cmd가 있다.
+- 현재 저장소 `core.longpaths=true`. work/에 과거 임시 QA 파일이 있으나 공식 테스트 스위트가 아니다.
 
-- 대상 저장소는 **chi-hub**다. 현재 PC 경로는 `C:\Archive\Projects\chi-hub`이며 인접한 다른 프로젝트의 문서를 사용하지 않는다.
-- 최신 제품 변경은 `235ee93`(학식 학교 선택을 대전대학교로 제한)이다. 대시보드 UI 변경은 `ee8c3e3`, 이전 인수인계 문서 정리는 `c2d5dfe`와 `a87c49d`에 있다.
-- **2026-09-16 사용자 요청으로 학식 변경 `235ee93`과 인수인계 문서 `b840a7b`를 GitHub `origin/main`에 push했다.** 이 동기화 기록을 담은 후속 문서 커밋도 같은 브랜치에 반영한다. 새 PC에서는 clone/pull 후 해당 커밋들과 후속 문서가 포함됐는지 `git log`와 `git status -sb`로 확인한다.
-- 사용자의 최종 방향: 기존 밝은 배경·검정·라임 색감 유지, 참고 이미지의 그룹 사이드바·상단 상태 행·정돈된 카드 배치만 적용. 탭은 기능 화면을 구분하며 선택한 기능 하나만 표시한다. 전체 기능 나열이나 별도 대시보드 요약 탭으로 되돌리지 않는다.
-- 대시보드 UI와 학식 버튼 제거는 로컬 구현·검증 완료다. 학식 화면은 대전대학교만 표시하며 서버의 다른 학교 API는 남아 있다. 추가 제품 작업은 새 사용자 요청을 따른다.
-- 대시보드 개편과 학식 변경 모두 운영 미게시다. 2026-09-16 기존 Sites 조회와 소스 접근 요청에서 `project_not_found`를 재확인했다. 같은 프로젝트의 소유 계정/워크스페이스 연결 복구가 필요하다.
-- 현재 PC에는 `.env.local`과 `node_modules`가 있고 Node 24.15.0/npm 11.12.1을 사용할 수 있다. 환경 변수 실제 값은 출력하지 않았으며 실제 로그인·데이터 연결은 별도 검증이 필요하다.
+## 스택 / 주요 파일
 
-### 핵심 스택
+- TypeScript, React/React DOM/React Server DOM Webpack **19.2.8**
+- Vinext **1.0.0-beta.10**, Vite **8.3.0**, RSC plugin **0.5.34**
+- Tailwind 4, shadcn/Base UI, Lucide, Supabase JS / SSR, Oxlint/Oxfmt
+- Node **24 LTS** (`>=24.13.0 <25`)
+- `vite.config.ts`: Vinext + Tailwind만 사용. Sites/Cloudflare plugin/Workers 실행 의존성 제거.
+- `next.config.ts`: `output: 'standalone'`. `dist/standalone/server.js`와 런타임 의존성을 생성.
+- `scripts/environment.mjs`: production 환경 로드·필수값 검사. 키의 실제 값은 출력하지 않음.
+- `scripts/build-server.mjs`: 환경 검사 후 production build.
+- `scripts/start-server.mjs`: loopback에서만 실행, 설정된 사이트 host에 대한 proxy 신뢰.
+- `app/api/health/route.ts`: DB와 무관한 프로세스 상태 확인.
+- `scripts/smoke-server.mjs`: dummy 설정으로 빌드한 앱의 production HTTP 회귀 검사.
+- `deploy/windows/`: Caddyfile, 배포/자동 시작/롤백 PowerShell, 상세 운영 안내.
+- `.openai/hosting.json`: 이전 Sites 연결 기록. 현재 빌드에서 읽지 않고 새 Sites 배포도 하지 않는다.
 
-- TypeScript, React 19
-- Vinext `1.0.0-beta.5` 기반 App Router 구조
-- Vite 8, Cloudflare Workers 호환 빌드
-- OpenAI Sites Vite plugin 및 `.openai/hosting.json`
-- Tailwind CSS 4와 전역 CSS(`app/globals.css`)
-- shadcn/Base UI 컴포넌트, Lucide React 아이콘
-- Supabase JS 및 `@supabase/ssr`
-- date-fns, Recharts 등은 의존성에 포함됨
-- Oxlint/Oxfmt
-- Node.js `>=22.13.0`, npm 및 `package-lock.json`
+## 환경 / 인증
 
-### 환경 변수
+환경 변수 이름은 `.env.example`에 유지한다. `.env.local`과 실제 URL/key 값은 Git·문서·로그에 넣지 않는다.
+기존 Supabase URL과 anon 또는 publishable key를 사용하며 service_role/secret key는 사용하지 않는다.
+서버 사이트 URL은 새 HTTPS 도메인, 로컬은 http://127.0.0.1:3000을 사용한다.
 
-실제 값은 Git에 넣지 않는다. `.env.example`에 다음 키만 문서화되어 있다.
+- 기존 Google provider와 Supabase 프로젝트 자체는 유지한다.
+- 새 도메인을 Supabase Site URL에 설정하고 `/auth/callback` 및 `?next=...`를 Redirect URLs에 허용해야 한다.
+- 로컬 `localhost:3000/auth/callback`, `127.0.0.1:3000/auth/callback`도 유지한다.
+- 앱과 Caddy를 통해 HTTPS로 들어온 요청의 Google OAuth/이메일 확인/로그인 복귀를 확인해야 한다.
+- `.env.local` 변경 시 client build에도 포함되므로 다시 build/deploy한다.
+- 기존 Sites owner-only 관문은 새 도메인에 적용되지 않는다. 앱 인증/RLS는 유지되며 신규 가입 정책은 Supabase Auth 설정에서 관리한다.
 
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_SITE_URL=
-```
+## 현재 구현 동작 (보존)
 
-로컬에서는 프로젝트 루트의 `.env.local`을 생성해 운영 Supabase URL과 공개 anon key를 설정한다. `.env.local`은 `.gitignore`에 의해 제외되며 PC마다 따로 준비해야 한다. 서비스 역할 키, 비밀번호, OAuth secret, 토큰은 클라이언트 코드나 이 문서에 기록하지 않는다.
+### 공통 셸
 
-### Supabase Auth 리다이렉트
+- `app/page.tsx`: AppShell + DashboardWorkspace. globals.css 다음 dashboard.css 적용.
+- 계획/집중·생활 관리·자료/정보 그룹 메뉴, 상단 연결 상태와 오늘 집중/루틴/할 일 요약.
+- API 변경 이벤트 후 상단 요약 갱신. 조회 실패는 0 대신 대시 표시.
+- 8개 `TabsContent keepMounted`로 비선택 화면은 숨기되 타이머/메모/폼 상태 보존.
+- 쿼리 `?view=기능명`으로 선택 보존, 기본 focus. 새로고침/뒤로 가기/legacy hash 지원.
+- 기존 개별 기능 경로는 같은 탭 쿼리로 redirect. 로그인 복귀 시 쿼리/해시 보존.
+- Base UI Tabs.Root 수직 방향키 포커스, Enter/Space 선택. 모바일 메뉴/하단 버튼 동기화.
+- 사이드바 상태 localStorage `chi-hub-sidebar`. 인증 상태 API, 미로그인 시 로그인 페이지 이동.
+- 이메일 가입/로그인/로그아웃, 서버 시작 Google OAuth, callback 세션 교환, PWA 구현.
 
-Google OAuth와 이메일 인증 콜백이 동작하려면 Supabase Redirect URLs에 최소 다음 주소가 등록되어 있어야 한다.
+### 기능
 
-- `http://127.0.0.1:3000/auth/callback`
-- `http://localhost:3000/auth/callback`
-- `https://chi-hub-personal.nolsup0305.chatgpt.site/auth/callback`
-
-## 프로젝트 구조
-
-```text
-.
-├─ .openai/hosting.json          # 기존 Sites 프로젝트 연결 정보
-├─ app/
-│  ├─ api/                       # 인증 및 기능별 서버 API
-│  ├─ auth/callback/             # Supabase OAuth/이메일 콜백
-│  ├─ page.tsx                   # AppShell + DashboardWorkspace 진입점
-│  ├─ calendar|files|focus|.../   # 기존 주소 → ?view=기능명 리다이렉트
-│  ├─ globals.css                # 전체 디자인 시스템과 기능별 스타일
-│  ├─ dashboard.css              # 기존 CSS 뒤에 적용하는 대시보드 배치 스타일
-│  ├─ layout.tsx                 # 메타데이터, 폰트, PWA 등록
-│  └─ manifest.ts                # PWA manifest
-├─ components/
-│  ├─ app-shell.tsx              # 공통 사이드바/모바일 내비게이션/인증 게이트
-│  ├─ dashboard-workspace.tsx    # 8개 기능의 keepMounted 탭 패널
-│  ├─ workspace-status.tsx       # 상단 오늘 집중/루틴/할 일 요약
-│  ├─ *-workspace.tsx            # 앱별 클라이언트 작업 화면
-│  └─ ui/                        # 프로젝트에 포함된 UI 프리미티브
-├─ hooks/use-api.ts              # API 조회/재시도 및 요청 helper
-├─ lib/
-│  ├─ campus-meals.ts            # 학식 응답 타입
-│  └─ supabase/                  # 브라우저/서버 Supabase client와 인증 helper
-├─ public/                       # PWA, 아이콘, 소셜 미리보기 정적 파일
-├─ supabase/migrations/          # 운영 스키마 변경 이력 0001~0005
-├─ CODEX_CONTEXT.md              # 지속적인 프로젝트 인수인계 문서
-├─ AGENTS.md                     # Codex 작업 및 컨텍스트 관리 규칙
-├─ package.json / package-lock.json
-├─ vite.config.ts                # Vinext, Sites, Cloudflare 플러그인
-└─ README.md
-```
-
-페이지와 API는 같은 기능 이름으로 대응한다. 사용자 데이터 API는 서버에서 Supabase 세션 사용자를 확인한 뒤 RLS가 적용된 테이블에 접근한다.
-
-## 현재 구현 상태
-
-### 공통 셸과 인증
-
-- 색상은 기존 밝은 배경·검정·라임을 유지한다. 참고 이미지의 구조만 반영해 사이드바를 계획/집중·생활 관리·자료/정보로 묶고, 데스크톱 상단에 연결 상태와 오늘 집중·루틴 완료·남은 할 일 요약을 배치했다. `WorkspaceStatus`는 기존 API를 조회하며 변경 이벤트 후 갱신하고 조회 실패는 0 대신 대시로 표시한다. 타이머 화면은 넓은 화면에서 실행·오늘 요약·최근 기록의 3열, 좁은 화면에서 2열/1열로 배치한다.
-- CHI.HUB는 공통 대시보드 셸 안에서 기능별 탭을 전환한다. **탭은 화면 구분이며 앵커 바로가기가 아니다. 선택한 기능 하나만 표시한다.** 전체 기능을 한 화면에 펼치는 패널 그리드와 접기/확대 버튼은 제거했다. 별도 요약 대시보드 탭도 없다. `app/dashboard.css`를 `app/globals.css` 뒤에 로드한다.
-- 왼쪽의 타이머·루틴/할 일·캘린더·메모·수면·운동·드라이브·학식은 실제 탭이다. 모바일은 메뉴 및 하단 버튼으로 같은 선택 상태를 바꾼다. 탭 전환은 `?view=기능명`에 반영하고 새로고침·뒤로 가기를 지원한다. 기본 탭은 타이머다.
-- 기존 개별 기능 주소는 `/?view=기능명`으로 리다이렉트한다. 예전 `/#기능명`도 해당 탭으로 복원하고 쿼리 형식으로 정규화한다. 로그인 복귀 경로는 쿼리와 해시를 보존한다.
-- TabsList/Trigger/Content는 기존 UI 컴포넌트를 재사용한다. 기존 Tabs 래퍼는 orientation을 primitive로 전달하지 않으므로 AppShell에서는 Base UI Tabs.Root를 직접 사용해 수직 방향키 탐색을 지원한다. 방향키로 포커스 이동 후 Enter/Space로 선택한다.
-- 사이드바 접기 상태는 `localStorage`의 `chi-hub-sidebar`에 저장됨.
-- AppShell이 `/api/auth/status`로 인증을 확인하고 미인증 사용자를 `/login`으로 보냄.
-- 이메일 회원가입/로그인/로그아웃과 Google OAuth가 구현됨.
-- Google OAuth는 `/api/auth/google` 서버 라우트에서 시작하며 `/auth/callback`에서 세션 코드를 교환함.
-- PWA manifest와 service worker 등록이 있음.
-
-### 홈과 집중 타이머
-
-- `DashboardWorkspace`는 실제 작업 컴포넌트를 `TabsContent keepMounted`로 유지한다. 비선택 화면은 숨기되 언마운트하지 않아 타이머·메모·입력 폼 상태가 유지된다. 한 화면에 여러 기능을 펼치지 않는다.
-- 타이머 완료 창은 body 포털로 렌더링하므로 다른 탭을 보고 있어도 표시된다.
-- 집중/짧은 휴식/긴 휴식 모드, 직접 시간 편집, 완료 기록, 기록 삭제가 구현됨.
-- 실행 중인 타이머는 `localStorage`의 `chi-hub-focus-timer-v2`에 종료 시각을 저장해 새로고침이나 백그라운드 전환 뒤에도 이어짐.
-- 완료된 집중 세션은 `focus_sessions`에 저장됨.
-
-### 루틴과 데일리 할 일
-
-- 매일 반복 및 특정 요일 반복 루틴을 생성/완료/삭제할 수 있음.
-- 완료 날짜와 시각을 `routine_checks`에 기록함.
-- 날짜별 데일리 할 일을 생성하고 완료 상태를 변경하거나 삭제할 수 있음.
-
-### 수면
-
-- 취침 시작/기상 종료 방식의 진행 중 수면 타이머와 직접 기록이 구현됨.
-- 수면 시간, 품질, 메모와 평균 요약을 제공함.
-- 사용자당 진행 중 수면 기록은 하나만 허용하는 partial unique index가 있음.
-
-### 캘린더
-
-- 월간 6주 그리드, 이전/다음 달 이동, 날짜 선택이 구현됨.
-- 사용자가 직접 일정을 생성하고 삭제할 수 있음.
-- 일정, 루틴 완료, 데일리 할 일, 수면, 집중 타이머 기록을 날짜별 통합 타임라인으로 표시함.
-- 같은 대시보드에서 루틴·할 일·수면·집중 기록 변경 후 `apiRequest`가 알림을 보내면 통합 캘린더 GET을 다시 조회한다. 캘린더와 루틴/할 일의 날짜 선택은 로컬 날짜를 사용해 UTC 변환으로 하루 밀리던 문제를 보정했다.
-
-### 운동
-
-- 운동 제목, 날짜, 시간, 메모 기록과 삭제가 구현됨.
-- 최근 7일 요약 통계를 제공함.
-
-### 메모
-
-- Markdown, 스티커, 필기(drawing) 유형과 카테고리, 검색, 고정, 미리보기, 삭제가 구현됨.
-- 기존 메모는 실제 변경이 있을 때만 자동 저장함.
-- 입력 후 800ms 동안 변경이 없으면 저장을 시작함.
-- `저장 중…`을 최소 1.5초, `저장됨`을 최소 1.5초 표시한 후 0.4초 애니메이션으로 사라지게 설계됨.
-- 새 메모는 내용이 있을 때 자동 저장하며 제목이 없으면 자동 제목을 생성함. 내용 없는 새 메모는 저장하지 않음.
-- 메모 전환 시 미저장 변경을 즉시 저장 요청함.
-- 삭제는 자체 확인 모달을 사용하며 삭제 후 새 메모 상태로 초기화됨. 이후 입력하면 새 메모 자동 저장이 다시 동작함.
-
-### 드라이브
-
-- Supabase Storage의 비공개 `private-files` 버킷을 사용함.
-- 다중 업로드, 다운로드, 삭제, 목록/그리드 전환, 이미지 미리보기가 구현됨.
-- 경로 첫 세그먼트에 사용자 ID를 사용하며 Storage RLS로 사용자 파일만 접근 가능함.
-- 마이그레이션 기준 파일 제한은 500 MiB임.
-- 사이드바 명칭은 `파일`이 아니라 `드라이브`를 사용함.
-
-### 학식
-
-- `/meals` 앱과 `/api/campus-meals` 서버 라우트가 구현됨.
-- 화면의 학교 선택은 대전대학교만 제공한다. 충북대학교·한국외국어대학교 버튼은 2026-09-16 사용자 요청으로 제거했다. 기존 저장값이 두 학교여도 대전대학교로 복원된다. 서버의 기존 학교 파서/API는 유지한다.
-- 대전대학교: 공식 페이지에서 혜화문화관, 제2생활관, 제5생활관(HRC) 주간 식단을 파싱함.
-- 서버에만 유지된 충북대학교 API: 공식 생활협동조합 페이지에서 한빛식당, 별빛식당, 은하수식당 주간 식단과 가격을 파싱함.
-- 서버에만 유지된 한국외국어대학교 API: 공식 날짜별 공개 식단 소스가 미확인되어 서울/글로벌캠퍼스 공식 식당 위치 안내를 반환함. 두 학교 버튼을 임의로 복원하지 않는다.
-- 외부 HTML은 브라우저가 아니라 서버 라우트에서 가져옴. 응답은 브라우저 5분, 공유 캐시 30분, stale-while-revalidate 24시간 정책을 사용함.
-- 학식 기능은 Supabase 스키마를 변경하지 않음.
+- 집중/짧은 휴식/긴 휴식, 시간 편집, 완료/삭제. 종료 시각을 `chi-hub-focus-timer-v2`에 저장해 새로고침/백그라운드 복원. 완료 창은 body portal이라 비선택 탭에서도 표시.
+- 일간/요일 반복 루틴 생성/완료/삭제와 날짜별 daily tasks. 체크 날짜/시각 기록.
+- 수면 타이머 시작/종료, 직접 기록, 품질/메모/평균. 사용자당 진행 기록 하나인 partial unique index.
+- 월간 6주 캘린더, 일정 생성/삭제. 일정·루틴·할 일·수면·집중 통합 타임라인. 변경 이벤트 후 재조회, 로컬 날짜 사용.
+- 운동 제목/날짜/시간/메모, 삭제, 최근 7일 요약.
+- 메모 Markdown/스티커/필기, 카테고리/검색/고정/미리보기/삭제.
+- 메모 자동 저장은 실제 변경만, 800ms debounce, 저장 중/저장됨 각각 최소 1.5초 후 0.4초 fade.
+- 새 메모 빈 내용 미저장/자동 제목, 전환 시 즉시 저장 요청, 자체 삭제 모달 및 완전한 새 draft 초기화 유지.
+- 드라이브는 private-files Storage, 사용자 ID 경로/RLS, 다중 업로드/다운로드/삭제, 목록/그리드/이미지 미리보기. 500 MiB 제한.
+- 학식 UI는 대전대학교만 제공. 저장값 cbnu/hufs도 dju로 복원.
+- 대전대 공식 주간 HTML의 혜화문화관/제2생활관/HRC 파싱. 충북대 파서와 한국외대 위치 안내 API는 서버에 유지.
+- 한국외대 날짜별 메뉴는 미확인으로 추정하지 않는다. UI 버튼 복원 없이 요청이 있을 때만 조사.
+- 학식 cache: browser 5분/shared 30분/stale 24시간. 과거/다음 주 UI 없음. 외부 HTML 변경에 취약.
 
 ## 데이터 모델
 
-`supabase/migrations`의 현재 마이그레이션은 다음 순서다.
+supabase/migrations에 0001~0005가 있으며 새 변경은 다음 migration으로 추가한다.
 
-- `0001_initial_schema.sql`: profiles, focus_sessions, sleep_logs, routines, routine_checks, workout_logs, notes, files, 비공개 Storage 버킷과 RLS
-- `0002_sleep_timer_and_larger_files.sql`: 진행 중 수면 허용, 사용자당 하나로 제한, 파일 제한 500 MiB
-- `0003_routines_and_daily_tasks.sql`: 일간/주간 반복 필드와 daily_tasks
-- `0004_calendar_events.sql`: 사용자 일정
-- `0005_note_types_and_categories.sql`: 메모 유형, 카테고리, 필기 데이터
+1. profiles, focus_sessions, sleep_logs, routines, routine_checks, workout_logs, notes, files, private Storage/RLS
+2. 진행 중 수면, 사용자당 하나 제한, 500 MiB 파일 제한
+3. 반복 필드와 daily_tasks
+4. calendar_events
+5. 메모 유형/카테고리/필기
 
-모든 공개 사용자 테이블은 RLS를 사용하고 정책은 `auth.uid()`와 해당 행의 사용자 ID를 비교한다. 새 테이블이나 버킷을 추가할 때도 RLS와 사용자 범위 정책을 함께 작성해야 한다.
+API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위를 제한한다.
+실제 운영 migration 적용 여부는 코드만으로 단정할 수 없다. 로컬 CRUD도 운영 데이터를 변경하므로 테스트를 최소화한다.
 
-## 지금까지 완료한 작업
+## Windows 배포 절차 / 운영 원칙
 
-- CHI.HUB 앱 셸, 반응형 내비게이션, 접기 상태 유지
-- Supabase 이메일 인증 및 Google OAuth
-- 집중 타이머의 백그라운드/새로고침 복원과 세션 기록
-- 반복 루틴, 데일리 할 일, 수면, 운동 기록
-- 월간 캘린더와 여러 기능 기록의 통합 표시
-- 메모 유형/카테고리/미리보기/필기/정교한 자동 저장/삭제 후 상태 초기화
-- 비공개 드라이브의 다중 업로드, 그리드 보기, 이미지 미리보기
-- 대전대·충북대·한국외대 대상 학식 앱 1차 구현
-- 모바일 터치 및 키보드 포커스 접근성 보완
-- 프로젝트 내부 지속 컨텍스트 문서와 자동 관리 규칙 도입
+상세 명령은 `deploy/windows/README.md` 참고.
 
-## 주요 기술적 결정
+- `npm ci` → typecheck/관련 검증 → `npm run build` → 로컬 커밋 → SSH/bundle로 서버 소스 전달.
+- GitHub origin push는 별도 사용자 요청 시만 수행. Sites 게시 의무는 이번 사용자 결정으로 대체됨.
+- 서버 `deploy.ps1`: clean source 확인, 설치/빌드, 새 릴리스 복사, 13000 포트 상태 검사 후 active pointer 전환.
+- `install-app-task.ps1`: LOCAL SERVICE 권한의 CHI-HUB-App 작업. 부팅 자동 시작, 비정상 종료 재시도, 로그 저장.
+- 앱은 127.0.0.1:3000으로 제한. 공개 진입점은 Caddy HTTPS 80/443이며 3000/13000은 외부에 열지 않는다.
+- `rollback.ps1`: 보관된 이전 빌드와 환경 파일로 복구. DB rollback 아님.
+- 빌드 중 기존 운영 프로세스 유지. 전환에는 짧은 중단이 있고 로그/이전 릴리스 정리는 수동이다.
+- `.env.local`은 source에 별도 관리하고 release에 서버 내부 복사. runtime ACL은 배포 사용자/관리자/SYSTEM/LOCAL SERVICE로 제한.
+- 서버에서 사용자 변경을 덮어쓰거나 git reset하지 않는다.
 
-1. **운영 데이터는 Supabase에 유지한다.** Sites의 D1/R2는 `.openai/hosting.json`에서 현재 `null`이며, 기존 Supabase Auth/DB/Storage 연결을 보존한다.
-2. **사용자 데이터 접근은 서버 API + Supabase RLS를 사용한다.** 브라우저에는 공개 anon key만 제공하고 service role key는 사용하지 않는다.
-3. **로컬도 운영 Supabase에 연결한다.** 별도 개발 DB가 아니므로 로컬 CRUD도 실제 운영 데이터 변경이다.
-4. **기기 UI 상태만 localStorage에 둔다.** 사이드바, 실행 중 집중 타이머, 선택 학교처럼 기기 로컬로 충분한 상태에 한정한다.
-5. **학식은 공식 소스를 우선한다.** 공개 API가 없는 학교는 서버에서 공식 HTML을 파싱하고 캐시한다. 서드파티 데이터를 진실의 원천으로 사용하지 않는다.
-6. **한국외대 메뉴를 추정하지 않는다.** 공식 날짜별 식단 소스를 찾지 못한 상태에서는 확인 가능한 식당 운영 정보만 표시한다.
-7. **운영 배포는 Sites 전용 저장소만 사용한다.** GitHub `origin`은 다른 PC와 소스를 동기화하기 위한 용도이며 사용자가 명시적으로 요청한 경우에만 push한다. Sites 저장소 자격 증명은 필요할 때 도구에서 발급받아 해당 명령에만 사용하며 Git remote나 파일에 저장하지 않는다.
-8. **`.env.local`은 영구적으로 로컬 전용이다.** Git, 인수인계 문서, 로그에 실제 값을 남기지 않는다.
-9. **기존 디자인을 확장한다.** 검정/라임/종이색 토큰과 공통 AppShell/탭 구조를 유지하고, 기능 추가 시 기존 UI 프리미티브를 우선 재사용한다. 현재 홈은 FeatureLayout이 아니라 AppShell + DashboardWorkspace로 구성된다.
+## 검증 / 알려진 문제
 
-## 해결한 문제
+2026-09-16 Windows 운영 전환 소스:
 
-- 로컬 Google 로그인이 `google-config` 오류로 돌아오던 문제를 서버 시작 OAuth 흐름과 Supabase Redirect URL 구성으로 해결함.
-- 사이드바 접기 상태가 페이지 전환 뒤 초기화되는 문제를 localStorage 기반 외부 저장소 구독으로 해결함.
-- 타이머가 새로고침/백그라운드에서 끊기는 문제를 절대 종료 시각 저장 방식으로 해결함.
-- 루틴과 수면을 하나의 화면에 섞지 않고 독립 앱으로 분리함.
-- 캘린더가 수동 일정만 보여주던 한계를 다른 앱의 기록을 합치는 통합 API로 해결함.
-- 메모 자동 저장이 변경 없이 반복되거나 전환/삭제 뒤 잘못된 상태를 유지하던 문제를 snapshot 비교와 draft 초기화로 해결함.
-- 브라우저 기본 confirm에 의존하던 메모 삭제를 자체 모달로 변경함.
-- 드라이브의 단일 업로드/목록 한계를 다중 업로드, 그리드, 이미지 미리보기로 확장함.
-- 공개 API가 없는 학식 데이터를 공식 학교 페이지의 서버측 파싱으로 제공함.
+- npm audit **0건**. Cloudflare 계열 제거, React/Vinext/Vite/RSC 보안 업데이트, undici 잠금 버전 갱신.
+- TypeScript 검사 성공. production standalone 빌드 성공.
+- dummy Supabase 설정으로 HTTP smoke: 홈/로그인/학식/manifest, JS asset, 인증 401, legacy 경로, HTTPS proxy callback, 외부 redirect 방어 통과.
+- 변경 TS/JS 파일 lint 통과. PowerShell syntax 검사 통과.
+- 전체 lint는 기존 8건 유지: calendar API any 1, files img 1, notes save 선언순서/deps 2 및 dialog 1, routines String unknown 2, calendar FormEvent deprecated 1.
+- 실제 로그인/Google OAuth/사용자 CRUD/외부 HTTPS/부팅 복구는 아직 확인 필요. health 성공은 DB 연결 성공을 의미하지 않는다.
+- 개발 PC에서는 임시 테스트 환경만 사용했으며 운영 데이터를 변경하지 않았다.
+- 2026-09-15 UI의 8개 탭 × 3개 크기, 상태 보존, 키보드, 타이머 portal, 요약 갱신 QA는 이전 작업의 테스트 API 검증 기록이다. 이번에 전체 UI QA를 반복한 것은 아니다.
 
-## 현재 진행 중인 작업
+## 현재 진행 중 / 다음 단계
 
-- 진행 중인 기능 구현은 없음.
-- 배포만 미완료: 대시보드 개편과 학식 학교 버튼 제거는 **운영 미반영**이다. 2026-09-16 기존 프로젝트에 대한 Sites 조회와 소스 자격 증명 요청이 모두 `project_not_found`를 반환했다. 업로드·버전 저장·게시를 진행하지 못했다. 기존 사이트 소유 계정/워크스페이스 연결 확인 후 같은 프로젝트로 게시를 재개한다. 새 사이트를 만들거나 GitHub origin에 대신 push하지 않았다.
-- 다음 작업을 시작하기 전에 이 문서의 알려진 문제와 실제 `git status`, 최근 커밋을 다시 확인한다.
+- Windows 서버 전환 설정과 취약점 정리 구현 완료, 서버 전달/설치 검증 진행 중.
+- 서버 Supabase 설정 입력을 사용자에게 안내했다. 값 자체를 요청하지 않았다.
+- 서버에서 새 소스 설치/빌드, task 실행, Caddy 설치/HTTPS, router TCP 80/443, Supabase callback 등록 및 실제 로그인 확인 필요.
+- 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
-## 알려진 문제 / 미해결 문제
+## 최근 핵심 이력
 
-### 코드 품질
-
-2026-09-09 기준 전체 `oxlint` 실행 시 기존 코드에 다음 8개 진단이 남아 있다. 빌드는 성공하지만 lint는 깨끗하지 않다.
-
-- `app/api/calendar/route.ts`: `no-explicit-any` 1건
-- `components/files-workspace.tsx`: `<img>`에 대한 `next/no-img-element` 1건
-- `components/notes-workspace.tsx`: `save` 선언 전 접근 및 effect dependency 2건
-- `components/notes-workspace.tsx`: 삭제 모달에 semantic `<dialog>` 권고 1건
-- `app/api/routines/route.ts`: unknown body 값을 `String()` 처리하는 `no-base-to-string` 2건
-- `components/calendar-workspace.tsx`: deprecated `React.FormEvent` 진단 1건
-
-Git으로 추적되는 unit/e2e 테스트 스위트는 없다. 2026-09-15 UI 검증의 임시 Playwright 스크립트는 이전 PC의 무시되는 `work/`에 있었으며 현재 PC에는 없다. 재검증 범위는 아래 검증 항목을 따른다. 전체 lint의 8개 진단은 과거 실행 결과다. 9월 15일 UI 변경에서는 변경 컴포넌트만 lint를 실행했고, 9월 16일 학식 버튼 제거에서는 lint를 재실행하지 않았다.
-
-### 기능 및 운영
-
-- 현재 PC에는 `.env.local`이 있지만 운영 인증·실제 데이터·DB 마이그레이션 적용 여부는 미검증이다. 이전 PC의 로컬 브라우저 QA는 격리된 테스트 컨텍스트에서 조회와 변경 API를 모두 가로채 테스트 응답으로 대체했으며 운영 데이터를 변경하지 않았다.
-- 이전 PC에서 긴 Codex 체크포인트 경로 때문에 `git pull`이 실패해 `core.longpaths=true`로 해결한 이력이 있다. 현재 저장소에서는 해당 설정값이 조회되지 않았다. 새 PC에서 같은 오류가 발생하면 설정을 확인하며 체크포인트를 임의로 삭제하지 않는다.
-- 이전 PC에서는 임시 npm 실행기를 사용했다. 현재 PC는 `C:\Program Files\nodejs\npm.cmd`를 사용할 수 있다. Sites 빌드 helper는 로컬 npm 경로 오류로 실패해 표준 `npm.cmd run build`를 사용한다. 패키지 버전·잠금파일은 변경하지 않았다.
-- 한국외대 서버 API는 공식 날짜별 식단 소스 미확인으로 식당 위치만 반환한다. 현재 UI에서는 제외되었으므로 추가 조사는 학교 지원 재요청 시에만 진행한다.
-- 대전대와 충북대 식단은 외부 HTML 구조에 의존하므로 학교 사이트 마크업 변경 시 파서가 깨질 수 있다. 빈 결과나 502 발생 시 공식 페이지 구조부터 확인한다.
-- 학식 파서는 현재 주간 페이지를 대상으로 하며 과거/다음 주 탐색 UI는 없다.
-- 로컬 환경이 운영 Supabase를 사용하므로 테스트 데이터 생성/수정/삭제도 실제 반영된다.
-- 초기 마이그레이션이 실제 Supabase 프로젝트에 모두 적용됐는지는 새 환경에서 코드만으로 단정하지 말고 Supabase 상태를 확인해야 한다.
-
-## 다음 작업
-
-우선순위가 확정된 제품 작업은 없다. 다음 후보는 사용자 요청에 따라 선택한다.
-
-1. 기존 8개 lint 진단을 기능 회귀 없이 정리하고 전체 lint를 통과시키기
-2. 기존 Sites 프로젝트 연결 복구 후 미게시 변경을 같은 비공개 사이트에 반영
-3. 학식 소스 파서에 fixture 기반 단위 테스트와 소스 구조 변경 감지 추가
-4. README의 기능 목록과 마이그레이션 안내를 현재 구현 상태(구글 로그인, 캘린더, 메모 유형, 학식, 0001~0005)에 맞게 갱신
-5. 사용자가 요청하는 다음 CHI.HUB 앱 또는 기존 기능 개선
-
-## 실행 / 빌드 / 테스트 방법
-
-### 새 PC 초기 설정
-
-1. **이번 변경이 포함된 프로젝트 전체를 확보한다.** GitHub main을 clone/pull하고 `235ee93`, `b840a7b` 및 후속 동기화 기록 문서 커밋이 포함됐는지 `git log`로 확인한다.
-2. Node.js 22.13 이상을 설치한다.
-3. 프로젝트 루트에서 `npm ci`를 실행한다.
-4. `.env.example`을 참고해 `.env.local`을 만들고 운영 Supabase 공개 설정을 입력한다.
-5. Supabase Google provider와 Redirect URLs를 확인한다.
-
-### 로컬 실행
-
-```bash
-npm ci
-npm run dev -- --hostname 127.0.0.1 --port 3000
-```
-
-정확한 로컬 확인 주소는 `http://127.0.0.1:3000`이다. Supabase HTTPS 접근이 필요하므로 Codex에서 서버를 실행할 때 네트워크 권한 제한이 없는 방식이 필요할 수 있다. 이미 3000 포트 서버가 있다면 먼저 상태를 확인하고 중복 실행하지 않는다.
-
-- 2026-09-16 문서 정리 시 현재 PC의 `127.0.0.1:3000` 포트가 수신 중이었다. 새 세션/새 PC에서는 서버가 계속 실행 중이라고 가정하지 않는다.
-- 학식 바로가기: `http://127.0.0.1:3000/?view=meals`.
-- Windows PowerShell에서 npm 실행 문제가 있으면 `npm.cmd`를 사용한다. 현재 PC의 확인된 경로는 `C:\Program Files\nodejs\npm.cmd`이며 다른 PC에서는 설치 경로를 확인한다.
-
-### 검증
-
-```bash
-npm run build
-npm run lint
-```
-
-- 2026-09-15 `ee8c3e3` UI 소스 기준 production build, `tsc --noEmit --incremental false`, 변경 컴포넌트 oxlint 및 `git diff --check` 통과. 이후 문서만 수정하는 작업에서는 빌드를 반복하지 않는다.
-- 2026-09-16 `235ee93` 소스 기준 production build 성공, `/?view=meals` HTTP 200, `git diff --check` 통과. 학교 목록과 저장값 검증 코드를 확인했다. 브라우저 상호작용·실제 학식 API 응답·Supabase 인증/CRUD·전체 lint·별도 TypeScript 검사는 이 변경에서 재실행하지 않았다. 현재 `dist/server/index.js`가 있지만 새 PC에는 전달되지 않으므로 필요 시 다시 빌드한다.
-- 전체 lint의 과거 8개 진단과 추적되는 자동 테스트 스위트 부재는 위 코드 품질 항목 참고.
-- 2026-09-15 이전 PC의 브라우저 검증: Edge headless에서 8개 탭 × 1440/1024/390px, 한 패널만 표시·가로 넘침 없음, 메모 초안/자동 저장·실행 타이머 유지, 방향키+Enter, 모바일 메뉴, 새로고침/뒤로 가기/레거시 해시/8개 주소 리다이렉트, 비선택 탭 타이머 완료 창, 상단 요약 집계·변경 후 갱신·조회 실패 표시를 확인했다.
-- 테스트 컨텍스트에서 `/api/**` 조회와 변경을 모두 대체 응답으로 처리했다. 실제 Supabase 인증/CRUD/운영 화면 검증을 완료한 것으로 해석하지 않는다.
-- 이전 PC의 임시 QA 파일: `work/tabs-qa.cjs`, `work/tab-timer-completion-qa.cjs`, `work/layout-status-qa.cjs`. 현재 PC에는 없으며 정식 프로젝트 의존성이나 이식 가능한 테스트 스위트가 아니다.
-- 로컬 HTTP smoke test 시 최소 `/`, `/login`, 수정한 페이지와 관련 API의 비오류 응답을 확인한다.
-- 학식 점검 예: `/?view=meals`, `/api/campus-meals?university=dju`, 이전 `/meals` 주소의 리다이렉트. 저장값 `cbnu`/`hufs`가 있어도 대전대학교로 열리는지 확인한다. 다른 두 학교 API는 해당 서버 코드를 수정할 때 점검한다.
-- 인증된 CRUD 테스트는 운영 데이터를 바꾸므로 테스트용 레코드 범위를 명확히 하고 즉시 정리한다.
-
-### 배포
-
-사용자가 변경을 요청해 로컬 확인이 끝나면 다음을 한 흐름으로 완료한다.
-
-1. 변경된 정확한 소스를 로컬 커밋
-2. Sites 프로젝트의 전용 비공개 소스 저장소에만 업로드
-3. 같은 커밋의 빌드 산출물을 Sites version으로 저장
-4. 기존 owner-only 비공개 접근을 유지해 게시
-5. 게시 상태 성공과 운영 URL 확인
-
-운영 배포를 GitHub Pages나 GitHub Actions로 대체하지 않는다. GitHub `origin` push는 사용자가 소스 동기화를 명시적으로 요청한 경우에만 수행한다. `.env.local`을 커밋하거나 Sites archive에 소스 파일로 포함하지 않는다.
-
-## 주의사항
-
-- **데이터 안전:** 로컬 앱이 운영 Supabase에 연결된다. 생성·수정·삭제는 실제 사용자 데이터에 반영된다.
-- **Git 안전:** 현재 `origin`은 GitHub 저장소다. 명시적 사용자 요청이 있을 때만 필요한 브랜치/커밋을 push하고, 운영 게시에는 사용하지 않는다. Sites 소스 저장소는 영구 remote로 추가하지 않는다.
-- **비밀 관리:** `.env.local`, API 키, 토큰, 쿠키, 사용자 이메일/개인 데이터의 실제 값은 문서·커밋·도구 출력에 남기지 않는다.
-- **마이그레이션:** 새 schema 변경은 새 번호의 SQL 파일로 추가하고 RLS, 정책, 인덱스, 롤백 영향을 검토한다. 이미 적용된 마이그레이션을 의미 없이 다시 쓰지 않는다.
-- **학식 데이터:** 공식 페이지 링크와 학교명을 보존하고, 파싱 실패 시 임의 메뉴를 표시하지 않는다.
-- **메모 자동 저장:** 저장 타이밍과 상태 애니메이션은 사용자가 여러 차례 조정한 동작이다. 관련 코드를 바꿀 때 아래 규칙을 회귀 테스트한다.
-  - 실제 변경만 저장
-  - 800ms debounce
-  - 저장 중/저장됨 최소 표시 시간
-  - 새 메모의 빈 내용 미저장 및 자동 제목
-  - 전환 시 즉시 저장 요청
-  - 삭제 후 완전한 새 draft 상태
-- **기존 변경 보존:** dirty worktree의 사용자 변경을 덮어쓰거나 reset하지 않는다.
-- **컨텍스트 유지:** 중요한 기능/구조/설정/결정이 바뀌면 같은 작업에서 이 문서를 현재형으로 정리한다. 사소한 변경을 일지처럼 모두 누적하지 않는다.
-
-## Git 및 다른 PC로의 전달
-
-- `CODEX_CONTEXT.md`와 `AGENTS.md`는 `.gitignore` 대상이 아니며 Git으로 추적해야 한다.
-- `.env.local`, 빌드 산출물(`dist`, `.next`, `.vinext`)과 로컬 Wrangler 상태는 전달 대상이 아니다.
-- USB로 옮길 때는 저장소와 숨김 `.git` 디렉터리를 함께 복사하거나, 최소한 추적 파일 전체와 최신 커밋을 포함하는 Git bundle을 사용한다.
-- 다른 PC의 새 Codex 세션에서는 먼저 `AGENTS.md`, `CODEX_CONTEXT.md`, 실제 `git status`, `git log`, `package.json`, `.openai/hosting.json`을 확인한다.
-- 2026-09-16 별도 사용자 요청으로 `235ee93`과 `b840a7b`를 GitHub origin/main에 push했다. 후속 동기화 기록 문서도 같은 원격 main에 반영한다. Sites 운영 게시 장애는 그대로이며 이번 GitHub push는 운영 배포가 아니다.
-- 최신 내용을 다른 PC로 옮기려면 사용자 지시에 따른 GitHub main 동기화 후 clone/pull하거나, 아래 Git bundle 방식으로 전달한다. 저장소를 복사할 경우 `.git`과 추적 소스를 포함하고 `.env.local` 등 비밀 파일은 별도로 안전하게 준비한다. 소스 동기화와 Sites 운영 배포는 별개다.
-- Git bundle로 옮길 때는 문서 정리 커밋까지 만든 뒤 현재 PC에서 `git bundle create ../chi-hub-handoff.bundle main`, `git bundle verify ../chi-hub-handoff.bundle`을 실행할 수 있다. 새 PC에서는 `git clone /path/to/chi-hub-handoff.bundle chi-hub`로 복원한다. bundle clone의 origin은 bundle 경로이므로 GitHub remote를 자동으로 가진다고 가정하지 않는다. 이 명령들은 전달 안내이며 이번 문서 정리에서 bundle을 생성한 것은 아니다.
-- 새 채팅 시작 요청 예: “AGENTS.md와 CODEX_CONTEXT.md를 끝까지 읽고 실제 Git 상태와 비교해줘. 235ee93과 후속 인수인계 문서가 포함됐는지 확인해줘. 밝은 배경·검정·라임, 기능별 단일 화면 탭, 학식의 대전대학교 단독 선택을 유지해줘. GitHub 동기화와 Sites 미게시 상태를 구분하고, 아직 코드는 수정하지 마.”
-
-## 최근 작업 기록
-
-- 2026-09-16 · `235ee93`: 학식 화면에서 충북대학교·한국외국어대학교 선택 버튼 제거. 기존 학교 저장값 검증으로 대전대학교 기본값 유지, 서버 API 보존. Production build·로컬 학식 페이지 HTTP 200·diff 검사 통과. 이후 사용자 요청으로 인수인계 문서 `b840a7b`와 함께 GitHub main에 push 완료. Sites 조회·소스 접근 요청은 `project_not_found`로 게시 미완료.
-- 2026-09-16: 후속 인수인계 문서 정리. 현재 PC 환경, 최신 소스 전달 조건, 검증 범위와 운영 게시 장애를 실제 파일·Git 기준으로 갱신. 제품 코드·의존성·환경 값 변경 없음.
-- 2026-09-15: 참고 이미지의 그룹 메뉴·상단 상태 행·컴팩트한 카드 배치를 적용하되 기존 밝은 배경/검정/라임 색상 유지. 24개 화면/크기 조합, 탭 상태 보존·키보드·타이머 완료 창과 요약 집계/변경 갱신/오류 표시를 격리된 테스트 API로 검증. TypeScript·변경 컴포넌트 lint·production build 통과. 실제 데이터 수정 없음. 기존 Sites 프로젝트 접근 불가로 로컬 반영만 완료.
-- 2026-09-15: 사용자 피드백으로 전체 패널 나열을 폐기하고 기능별 실제 탭으로 재구성. 중복 패널 프레임과 접기/확대 UI 제거, 한 번에 한 작업 화면만 표시. 8개 탭 × 1440/1024/390px에서 표시 화면 1개·숨은 화면 상태 유지·가로 넘침 없음. 키보드(방향키+Enter), 모바일 메뉴, 메모 내용·실행 타이머 유지, 비선택 타이머 완료 창, 새로고침·뒤로 가기·이전 해시와 8개 이전 주소 복원 검증. 테스트 API만 사용했으며 운영 데이터 변경 없음. build·TypeScript·변경 컴포넌트 lint 통과. Sites 접근 불가 상태 유지.
-- 2026-09-09: 프로젝트 내부 지속 컨텍스트 시스템(`CODEX_CONTEXT.md`, `AGENTS.md`) 도입 및 다른 PC 동기화를 위해 GitHub `main` 업로드를 사용자 요청으로 허용.
-- 2026-09-08 · `3926970`: 대전대·충북대·한국외대 학식 앱 추가, 로컬 API/페이지 및 production build 검증, 비공개 Sites 게시.
-- 2026-09-07 · `75055bf`: 메모 삭제 후 새 draft 상태 초기화.
-- 2026-09-07 · `18e4569`: 메모 저장 흐름과 자체 삭제 모달 개선.
-- 2026-09-07 · `d2e2d51`: 메모 `저장됨` 상태 fade 애니메이션.
-- 2026-09-07 · `1e894d0`, `49d5d81`, `1e09ac4`, `dfaf660`: 메모 자동 저장, 전환, 새 메모 저장 피드백 정교화.
-- 2026-09-07 · `082349f`: 앱 내비게이션 및 캘린더 경험 개선.
-- 2026-09-07 · `9b0e622`, `70622fc`: 드라이브 보기/업로드 개선 및 캘린더 일정 삭제.
+- 2026-09-16: Windows 자가 호스팅 전환. Node standalone, 보안 의존성 업데이트, loopback/proxy 설정, health/smoke, 릴리스 배포/자동 시작/롤백 스크립트 추가. Sites 배포 중단 결정.
+- `c977a79`: 이전 GitHub 동기화 문서. 이번 작업 전 main/origin-main 기준점.
+- `235ee93`: 학식 대전대학교 단독 선택, 서버 다른 학교 API 유지. `b840a7b`와 함께 사용자 요청으로 GitHub 동기화.
+- `ee8c3e3`: 기존 색상 보존한 그룹 사이드바/상단 요약/컴팩트 UI.
+- `606cf7c`: 모든 기능 나열에서 상태 보존 단일 기능 탭으로 전환.
+- 이전 Sites 주소는 `https://chi-hub-personal.nolsup0305.chatgpt.site`; project_not_found로 최근 UI/학식 미게시 상태였음. 이제 해당 게시 복구는 작업 목표가 아니다.

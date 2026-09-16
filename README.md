@@ -1,32 +1,43 @@
 # CHI.HUB
 
-기록하고, 몰입하고, 성장하는 개인용 라이프 허브입니다. 모바일 우선 UI, PWA, Supabase 인증·데이터베이스·비공개 파일 보관함을 포함합니다.
+한국어 모바일 우선 개인용 PWA. 집중 타이머, 루틴·할 일, 캘린더, 수면, 운동, 메모, 비공개 드라이브, 대전대학교 학식을 제공합니다.
 
-## 주요 기능
+## 실행 환경
 
-- 실제 기록을 요약하는 홈 대시보드
-- 새로고침과 백그라운드 전환에도 이어지는 집중 타이머와 세션 기록
-- 일일 루틴 체크와 수면 기록·평균
-- 운동 기록과 최근 7일 통계
-- 검색·고정·편집·삭제가 가능한 메모
-- Supabase Storage 기반 비공개 파일 업로드·다운로드·삭제
-- 이메일 회원가입, 로그인, 복귀 경로, 로그아웃
+- Node.js 24 LTS (`>=24.13.0 <25`), npm, Git
+- React 19.2.8, Vinext 1.0.0-beta.10, Vite 8.3.0
+- Supabase Auth / PostgreSQL / Storage, migration 0001~0005
+- Windows Node.js standalone 운영, Caddy HTTPS
 
-## 로컬 실행
+## 로컬 개발
 
-```bash
-npm install
-copy .env.example .env.local
-npm run dev
+```powershell
+npm.cmd ci
+Copy-Item .env.example .env.local
+npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-`.env.local`에 Supabase 프로젝트 URL과 anon key를 입력하고, `supabase/migrations/0001_initial_schema.sql`을 Supabase SQL Editor 또는 CLI로 적용하세요. Supabase Auth의 Site URL과 Redirect URL에는 로컬 주소와 운영 주소의 `/auth/callback`을 등록해야 합니다.
+이미 `.env.local`이 있으면 복사하지 않습니다. 파일에 기존 Supabase 프로젝트의 공개 설정을 입력합니다.
+로컬도 운영 데이터에 연결되므로 CRUD 테스트는 실제 데이터를 변경합니다.
+Supabase 서비스 역할 키는 사용하지 않습니다. 기존 프로젝트에 migration을 임의 재적용하지 않습니다.
 
-## 검증
+## 검증 및 production 실행
 
-```bash
-npm run lint
-npm run build
+```powershell
+npm.cmd audit
+npm.cmd run typecheck
+npm.cmd run build
+npm.cmd start
 ```
 
-운영 배포는 `.openai/hosting.json`의 Sites 프로젝트 설정을 사용합니다.
+빌드 전에 `.env.local`이 필요합니다. 시작은 127.0.0.1:3000으로 제한됩니다.
+`npm.cmd run lint`에는 기존 8개 진단이 남아 있습니다. 상세 내용은 CODEX_CONTEXT.md를 확인합니다.
+
+## 운영
+
+운영 대상은 집의 Windows PC, 주소는 https://chi-hub.kro.kr 입니다.
+개발은 여러 PC에서 하고, 검증된 커밋만 서버에 전달합니다. GitHub push는 사용자 요청 시 수행합니다.
+Tailscale/SSH는 관리용이며 서비스 사용자는 도메인으로 접속합니다.
+
+설치·자동 시작·릴리스 전환·복구·HTTPS 절차는 [Windows 운영 안내](deploy/windows/README.md)를 따릅니다.
+기존 Sites 배포는 중단했으며 `.openai/hosting.json`은 과거 연결 기록입니다.
