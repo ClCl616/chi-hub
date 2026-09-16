@@ -101,7 +101,11 @@ DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변
 
 - 운영 앱: 67d0ded 소스로 빌드/설치, CHI-HUB-App 실행 중, loopback health 확인.
 - 서버 npm audit 0건. Supabase Auth 설정 조회 HTTP 200. 실제 사용자 로그인은 아직 미검증.
-- Caddy 2.11.4 설치/설정 검증 완료, 서비스 자동 시작/복구 설정 완료, 현재 중지 상태.
+- Caddy 2.11.4 설치/설정 검증 완료, 서비스 자동 시작/복구 설정 완료, 현재 실행 중.
 - Windows 방화벽 CHI-HUB-Web: Caddy 프로그램에만 TCP 80/443 inbound 허용.
-- 공유기 포트포워딩, Caddy 시작/인증서 발급, Supabase callback 및 외부 접속 검증이 다음 단계.
+- 공유기 포트포워딩 완료. 외부 HTTP 308과 Caddy 도달 확인. 인증서 발급은 아래 발급 한도로 대기 중이며 Supabase callback/실제 로그인은 후속 검증 필요.
 - 서버 별도 validation-source/runtime에 dummy 테스트 빌드가 남아 있다. validation task와 프로세스는 제거했다. 실제 키/운영 데이터는 테스트에 사용하지 않았다.
+
+## 2026-09-16 HTTPS 발급 대기
+
+Caddy 실행 후 외부 HTTP 요청은 HTTPS로 308 redirect되어 집 서버까지 연결됨을 확인했다. HTTPS 인증서는 아직 미발급이다. Let's Encrypt가 공유 등록 도메인 `kro.kr`의 7일간 50개 발급 한도(HTTP 429)를 반환했다. 서버 로그의 retry-after는 **2026-09-16 19:49:51 KST**이며 공유 한도이므로 그때 발급 성공을 보장하지 않는다. Caddy는 자체 자동 재시도 중이다. 임시 자체 서명 인증서나 HTTP 로그인으로 우회하지 않았다. 다른 CA(ZeroSSL 등) 사용 시 별도 계정/이메일 또는 EAB 설정이 필요할 수 있다.

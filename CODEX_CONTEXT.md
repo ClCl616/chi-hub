@@ -128,8 +128,8 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 ## 현재 진행 중 / 다음 단계
 
 - Windows 전환 및 보안 업데이트 완료. SSH/bundle로 서버 소스 전달, npm ci/audit 0건, 67d0ded 빌드 릴리스와 CHI-HUB-App 자동 시작 task 설치/실행 완료. loopback health와 Supabase Auth settings HTTP 200 확인.
-- Caddy 2.11.4 공식 archive SHA-512 검증/설치/config validate 완료. CHI-HUB-Caddy는 LOCAL SERVICE의 자동 시작/실패 재시작 서비스로 등록했으며 현재 중지 상태. Windows CHI-HUB-Web 방화벽은 해당 실행 파일의 TCP 80/443에만 허용.
-- 다음: 공유기 TCP 80/443 포트포워딩 → Caddy 시작/인증서 발급 → Supabase callback 등록 → 외부 HTTPS와 실제 로그인 → 재부팅 후 복구 확인.
+- Caddy 2.11.4 공식 archive SHA-512 검증/설치/config validate 완료. CHI-HUB-Caddy는 LOCAL SERVICE의 자동 시작/실패 재시작 서비스로 등록했으며 현재 실행 중. Windows CHI-HUB-Web 방화벽은 해당 실행 파일의 TCP 80/443에만 허용.
+- 공유기 TCP 80/443 포트포워딩 사용자 완료 확인, Caddy 시작 및 외부 HTTP 308 확인. 다음: 인증서 발급 한도 해소 → Supabase callback 등록 → 외부 HTTPS와 실제 로그인 → 재부팅 후 복구 확인.
 - 이번 소스는 로컬 커밋과 서버 bundle 동기화만 했다. GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 dummy 시험 산출물이며 task/프로세스는 제거했다.
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
@@ -141,3 +141,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - `ee8c3e3`: 기존 색상 보존한 그룹 사이드바/상단 요약/컴팩트 UI.
 - `606cf7c`: 모든 기능 나열에서 상태 보존 단일 기능 탭으로 전환.
 - 이전 Sites 주소는 `https://chi-hub-personal.nolsup0305.chatgpt.site`; project_not_found로 최근 UI/학식 미게시 상태였음. 이제 해당 게시 복구는 작업 목표가 아니다.
+
+## 2026-09-16 HTTPS 발급 대기
+
+Caddy 실행 후 외부 HTTP 요청은 HTTPS로 308 redirect되어 집 서버까지 연결됨을 확인했다. HTTPS 인증서는 아직 미발급이다. Let's Encrypt가 공유 등록 도메인 `kro.kr`의 7일간 50개 발급 한도(HTTP 429)를 반환했다. 서버 로그의 retry-after는 **2026-09-16 19:49:51 KST**이며 공유 한도이므로 그때 발급 성공을 보장하지 않는다. Caddy는 자체 자동 재시도 중이다. 임시 자체 서명 인증서나 HTTP 로그인으로 우회하지 않았다. 다른 CA(ZeroSSL 등) 사용 시 별도 계정/이메일 또는 EAB 설정이 필요할 수 있다.
