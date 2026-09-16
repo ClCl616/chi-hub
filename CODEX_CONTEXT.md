@@ -7,7 +7,7 @@
 CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 수면, 운동, 비공개 드라이브, 학식을 제공한다.
 
 - 2026-09-16 사용자 결정: Sites 계정 종속을 벗어나 **집의 상시 가동 Windows PC에서 운영**한다.
-- 새 서비스 주소: `https://chitoolbox.com` (DNS 연결 진행 중). Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
+- 서비스 주소: `https://chitoolbox.com` (DNS/공개 HTTPS 연결 확인). Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
 - 여러 PC(집/랩실/노트북)에서 개발하고 검증된 Git 커밋만 운영 서버에 전달한다.
 - 기존 Supabase Auth/DB/Storage를 유지한다. DB/schema 변경이나 데이터 이전은 이번 전환에 없다.
 - 2026-09-16 명칭 변경 승인: 앱 이름 CHI Toolbox, 화면 로고 CHI TOOLBOX, 소개 문구 “나의 일상을 위한 도구 상자”. 기존 C 아이콘/기능/데이터 유지. 내부 package, 저장 키, 서버 폴더와 작업/서비스 이름은 chi-hub/CHI-HUB를 유지한다.
@@ -20,7 +20,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 서버 소스 경로: `C:\Services\chi-hub`. SSH alias: `chi-server` (개인 키/계정 정보는 별도 관리).
 - 서버는 Node 24.21.0, npm 11.19.0, Git 설치 및 clone 완료. 관리자 SSH 접근 확인.
 - 서버 런타임: `C:\Services\chi-hub-runtime`; releases, active.txt, previous.txt, logs를 사용한다.
-- 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, 이전 kro.kr DNS A 레코드 연결 확인. 새 .com은 사용자 DNS 설정 대기. IP/MAC 값은 기록하지 않는다.
+- 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, 새 .com DNS A 레코드와 공개 HTTPS 연결 확인. IP/MAC 값은 기록하지 않는다.
 - 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
 - 개발 PC에 `.env.local` 없음. 서버는 사용자가 입력한 설정으로 build 및 Supabase Auth settings 조회 HTTP 200을 확인했다. 실제 값은 출력하지 않았다.
 - 개발 PC의 node는 Codex bundled runtime이고 npm은 PATH에 없다. 임시 `work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 node로 실행했다. 서버에는 표준 npm.cmd가 있다.
@@ -49,7 +49,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 서버 사이트 URL은 새 HTTPS 도메인, 로컬은 http://127.0.0.1:3000을 사용한다.
 
 - 기존 Google provider와 Supabase 프로젝트 자체는 유지한다.
-- 새 도메인을 Supabase Site URL에 설정하고 `/auth/callback` 및 `?next=...`를 Redirect URLs에 허용해야 한다.
+- 새 도메인 Supabase Site URL 및 `/auth/callback**` Redirect URLs 등록은 사용자 완료 확인.
 - 로컬 `localhost:3000/auth/callback`, `127.0.0.1:3000/auth/callback`도 유지한다.
 - 앱과 Caddy를 통해 HTTPS로 들어온 요청의 Google OAuth/이메일 확인/로그인 복귀를 확인해야 한다.
 - `.env.local` 변경 시 client build에도 포함되므로 다시 build/deploy한다.
@@ -122,20 +122,23 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - 변경 TS/JS 파일 lint 통과. PowerShell syntax 검사 통과. 별도 서버 테스트 릴리스에서 LOCAL SERVICE task 시작/중지/재시작과 health 확인 완료. 테스트 task는 제거했다.
 - 작업 스케줄러 중지만으로 하위 Node가 남는 Windows 동작을 확인해 stop-app.ps1에서 PID/시작 시각/경로 검증 후 종료하도록 보완했다.
 - 전체 lint는 기존 8건 유지: calendar API any 1, files img 1, notes save 선언순서/deps 2 및 dialog 1, routines String unknown 2, calendar FormEvent deprecated 1.
-- 실제 로그인/Google OAuth/사용자 CRUD/외부 HTTPS/부팅 복구는 아직 확인 필요. health 성공은 DB 연결 성공을 의미하지 않는다.
+- 실제 로그인/Google OAuth/사용자 CRUD/부팅 복구는 아직 확인 필요. 공개 HTTPS는 새 도메인에서 확인 완료. health 성공은 DB 연결 성공을 의미하지 않는다.
 - 개발 PC에서는 임시 테스트 환경만 사용했으며 운영 데이터를 변경하지 않았다.
 - 2026-09-15 UI의 8개 탭 × 3개 크기, 상태 보존, 키보드, 타이머 portal, 요약 갱신 QA는 이전 작업의 테스트 API 검증 기록이다. 이번에 전체 UI QA를 반복한 것은 아니다.
 
-## 현재 진행 중 / 다음 단계
+## 현재 운영 상태 / 다음 단계
 
-- Windows 전환 및 보안 업데이트 완료. SSH/bundle로 서버 소스 전달, npm ci/audit 0건, 67d0ded 빌드 릴리스와 CHI-HUB-App 자동 시작 task 설치/실행 완료. loopback health와 Supabase Auth settings HTTP 200 확인.
-- Caddy 2.11.4 공식 archive SHA-512 검증/설치/config validate 완료. CHI-HUB-Caddy는 LOCAL SERVICE의 자동 시작/실패 재시작 서비스로 등록했으며 현재 실행 중. Windows CHI-HUB-Web 방화벽은 해당 실행 파일의 TCP 80/443에만 허용.
-- 공유기 TCP 80/443 포트포워딩 사용자 완료 확인, Caddy 시작 및 외부 HTTP 308 확인. 다음: 인증서 발급 한도 해소 → Supabase callback 등록 → 외부 HTTPS와 실제 로그인 → 재부팅 후 복구 확인.
-- 이번 소스는 로컬 커밋과 서버 bundle 동기화만 했다. GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 dummy 시험 산출물이며 task/프로세스는 제거했다.
+- CHI Toolbox 명칭/도메인 전환 완료. 서버 runtime은 3edc62f 빌드 릴리스 20260916-170601-382-3edc62fdf13b이며 CHI-HUB-App 실행 중. 이전 릴리스는 rollback용으로 보존.
+- Caddy 2.11.4, CHI-HUB-Caddy 자동 시작/복구 서비스. 새 Caddyfile 검증·reload 완료. 기존 설정은 서버 Caddyfile.previous에 보존.
+- DNS 연결 및 공개 HTTPS 인증서 검증 성공. HTTP→HTTPS 308, health/login/manifest/공유 이미지 200, 미인증 파일 API 401, 새 도메인 callback 복귀 확인.
+- Supabase 설정 변경은 사용자 완료 확인. 다음: 실제 이메일/Google 로그인 확인, 계획된 재부팅 시 앱/Caddy 복구 확인.
+- 로컬/서버 npm audit 0건. 실제 사용자 데이터 생성·변경·삭제 없음.
+- GitHub origin에는 push하지 않았다. 서버의 validation-source/runtime는 이전 dummy 시험 산출물이며 task/프로세스는 제거했다.
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
 ## 최근 핵심 이력
 
+- 2026-09-16: CHI Toolbox 명칭 및 chitoolbox.com 전환, 새 공유 이미지, 서버 배포와 공개 HTTPS 검증 완료.
 - 2026-09-16: Windows 자가 호스팅 전환. Node standalone, 보안 의존성 업데이트, loopback/proxy 설정, health/smoke, 릴리스 배포/자동 시작/롤백 스크립트 추가. Sites 배포 중단 결정.
 - `c977a79`: 이전 GitHub 동기화 문서. 이번 작업 전 main/origin-main 기준점.
 - `235ee93`: 학식 대전대학교 단독 선택, 서버 다른 학교 API 유지. `b840a7b`와 함께 사용자 요청으로 GitHub 동기화.
@@ -143,14 +146,9 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - `606cf7c`: 모든 기능 나열에서 상태 보존 단일 기능 탭으로 전환.
 - 이전 Sites 주소는 `https://chi-hub-personal.nolsup0305.chatgpt.site`; project_not_found로 최근 UI/학식 미게시 상태였음. 이제 해당 게시 복구는 작업 목표가 아니다.
 
-## 이전 도메인 HTTPS 제한 / 새 도메인 전환
+## 브랜드 변경 참고
 
-이전 chi-hub.kro.kr은 공유 kro.kr 등록 도메인의 Let's Encrypt 발급 한도(429)로 인증서를 발급받지 못했다. 사용자가 chitoolbox.com을 선택하여 전환한다. 새 도메인은 구매 당시 주차용 A 레코드 2개가 있어 집 서버 공인 IP로 교체하도록 안내했다. DNS/인증서/로그인 복귀는 완료 여부를 각각 확인해야 한다.
-
-## 명칭/도메인 변경 진행
-
+- 이전 chi-hub.kro.kr은 공유 kro.kr 등록 도메인의 Let's Encrypt 발급 한도(429)로 인증서를 발급받지 못했다. 사용자 선택으로 chitoolbox.com 전환을 완료했다.
 - CHI Toolbox 명칭, 화면 로고/알림/PWA/메타데이터 변경. 기존 색감의 새 공유 이미지 public/og-toolbox.png 사용. 이전 이미지는 보존.
-- 새 도메인으로 Caddy 설정과 운영 문서, proxy smoke 기준 변경. 실제 Caddy 반영과 서버 환경 재빌드가 필요하다.
-- 로컬 typecheck/build/HTTP smoke 통과. dummy API로 1440/390px 화면과 manifest/title/login/OG 검증. 운영 데이터 변경 없음.
-- 사용자가 DNS 설정 중. Supabase Site URL/Redirect URLs 새 도메인 등록은 사용자 완료 확인. 실제 로그인은 별도 검증 필요.
+- 로컬 typecheck/build/HTTP smoke 통과. dummy API로 1440/390px 화면과 manifest/title/login/OG 검증.
 - 도메인이 바뀌므로 기존 브라우저 로그인/로컬 타이머·사이드바 상태는 자동 이전되지 않는다. Supabase 저장 데이터는 기존 계정으로 접근한다.

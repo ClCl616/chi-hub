@@ -99,15 +99,15 @@ DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변
 
 ## 2026-09-16 서버 적용 상태
 
-- 운영 앱: 67d0ded 소스로 빌드/설치, CHI-HUB-App 실행 중, loopback health 확인.
+- 운영 앱: 3edc62f 소스로 빌드/설치, CHI-HUB-App 실행 중, loopback health 확인.
 - 서버 npm audit 0건. Supabase Auth 설정 조회 HTTP 200. 실제 사용자 로그인은 아직 미검증.
 - Caddy 2.11.4 설치/설정 검증 완료, 서비스 자동 시작/복구 설정 완료, 현재 실행 중.
 - Windows 방화벽 CHI-HUB-Web: Caddy 프로그램에만 TCP 80/443 inbound 허용.
-- 공유기 포트포워딩 완료. 외부 HTTP 308과 Caddy 도달 확인. 이전 도메인 인증서 발급은 한도로 실패했으며 Supabase callback/실제 로그인은 후속 검증 필요.
+- 공유기 포트포워딩 완료. chitoolbox.com 공개 HTTPS/HTTP 308, health/login/manifest/공유 이미지 200과 callback 복귀 확인. Supabase URL 설정 사용자 완료 확인, 실제 로그인/재부팅은 후속 검증 필요.
 - 서버 별도 validation-source/runtime에 dummy 테스트 빌드가 남아 있다. validation task와 프로세스는 제거했다. 실제 키/운영 데이터는 테스트에 사용하지 않았다.
 
 ## 새 도메인 전환
 
-이전 chi-hub.kro.kr은 공유 등록 도메인 kro.kr의 인증서 발급 한도로 HTTPS 연결을 완료하지 못했다. 사용자 결정으로 chitoolbox.com으로 전환한다. 루트 A 레코드를 집 서버 공인 IP로 설정하고 Supabase Site URL/Redirect URLs를 갱신한다. 서버 환경 파일의 사이트 URL 수정 후 재빌드하고, 이 저장소의 Caddyfile을 검증·반영한다. 완료 여부는 CODEX_CONTEXT.md 참고.
+이전 chi-hub.kro.kr은 공유 등록 도메인 kro.kr의 인증서 발급 한도로 HTTPS 연결을 완료하지 못했다. 사용자 결정으로 chitoolbox.com으로 전환한다. 루트 A 레코드 연결, Supabase Site URL/Redirect URLs 사용자 설정 완료. 서버 환경 파일의 사이트 URL 수정·재빌드와 Caddyfile 검증·반영 및 공개 HTTPS 확인 완료. 현재 상태는 CODEX_CONTEXT.md 참고.
 
 브랜드는 CHI Toolbox이며 서버 경로/작업 이름은 기존 chi-hub/CHI-HUB를 유지한다.
