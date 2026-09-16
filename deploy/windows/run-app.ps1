@@ -11,5 +11,9 @@ $node = (Get-Command node.exe -ErrorAction Stop).Source
 $logDir = Join-Path $RuntimeRoot 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
-$process = Start-Process -FilePath $node -ArgumentList 'scripts/start-server.mjs' -WorkingDirectory $release -WindowStyle Hidden -PassThru -Wait -RedirectStandardOutput (Join-Path $logDir "app-$stamp.log") -RedirectStandardError (Join-Path $logDir "app-$stamp.error.log")
+$entry = Join-Path $release 'scripts\start-server.mjs'
+$process = Start-Process -FilePath $node -ArgumentList "`"$entry`"" -WorkingDirectory $release -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir "app-$stamp.log") -RedirectStandardError (Join-Path $logDir "app-$stamp.error.log")
+@{ id = $process.Id; started = $process.StartTime.ToUniversalTime().Ticks.ToString(); entry = $entry } | ConvertTo-Json | Set-Content (Join-Path $logDir 'process.json')
+$process.WaitForExit()
+$process.Refresh()
 exit $process.ExitCode

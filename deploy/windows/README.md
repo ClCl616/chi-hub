@@ -30,7 +30,7 @@ active.txt를 갱신한다. 기존 앱은 빌드 중 계속 실행된다. 변경
 
 `CHI-HUB-App` 작업은 부팅 시 LOCAL SERVICE 권한으로 실행된다. 로그인은 필요 없다.
 앱이 비정상 종료되면 1분 간격으로 최대 999회 재시도한다.
-수동으로 작업을 중지하면 자동 재시작하지 않는다. 시작은 `Start-ScheduledTask -TaskName CHI-HUB-App`.
+앱 중지는 `stop-app.ps1`을 사용한다. 작업 스케줄러만 중지하면 하위 Node가 남을 수 있다. 이 스크립트는 기록된 PID/시작 시각/실행 경로를 검증한 뒤 해당 프로세스만 종료한다. 수동 중지 후에는 자동 재시작하지 않는다. 시작은 `Start-ScheduledTask -TaskName CHI-HUB-App`.
 로그: `C:\Services\chi-hub-runtime\logs`. 로그/오래된 릴리스 정리는 운영자가 주기적으로 수행한다.
 서버 재부팅 후 task와 /api/health 확인은 실제 운영 전 수행한다.
 
@@ -41,7 +41,7 @@ active.txt를 갱신한다. 기존 앱은 빌드 중 계속 실행된다. 변경
 3. 도메인 A 레코드를 집의 공인 IPv4로 유지한다. 잘못된 AAAA 레코드를 만들지 않는다.
 4. 공유기 TCP 80/443을 서버 내부 IP의 80/443으로 전달한다. Windows 방화벽도 해당 포트를 허용한다.
 5. Caddy를 영구 Windows 서비스로 등록하고 자동 시작 및 실패 시 재시작을 설정한다.
-   공식 Windows 서비스 안내: https://caddyserver.com/docs/running#using-sc-exe
+   공식 Windows 서비스 안내: https://caddyserver.com/docs/running#sc-exe
    서비스 계정에 Caddy 설정 읽기 및 인증서 데이터 디렉터리 쓰기 권한을 부여한다.
 6. 앱은 127.0.0.1:3000만 수신한다. 3000/13000을 포트포워딩하지 않는다.
 7. Supabase Authentication > URL Configuration에서 Site URL을 새 HTTPS 주소로 설정한다.

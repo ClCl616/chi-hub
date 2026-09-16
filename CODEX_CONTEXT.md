@@ -118,7 +118,8 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - npm audit **0건**. Cloudflare 계열 제거, React/Vinext/Vite/RSC 보안 업데이트, undici 잠금 버전 갱신.
 - TypeScript 검사 성공. production standalone 빌드 성공.
 - dummy Supabase 설정으로 HTTP smoke: 홈/로그인/학식/manifest, JS asset, 인증 401, legacy 경로, HTTPS proxy callback, 외부 redirect 방어 통과.
-- 변경 TS/JS 파일 lint 통과. PowerShell syntax 검사 통과.
+- 변경 TS/JS 파일 lint 통과. PowerShell syntax 검사 통과. 별도 서버 테스트 릴리스에서 LOCAL SERVICE task 시작/중지/재시작과 health 확인 완료. 테스트 task는 제거했다.
+- 작업 스케줄러 중지만으로 하위 Node가 남는 Windows 동작을 확인해 stop-app.ps1에서 PID/시작 시각/경로 검증 후 종료하도록 보완했다.
 - 전체 lint는 기존 8건 유지: calendar API any 1, files img 1, notes save 선언순서/deps 2 및 dialog 1, routines String unknown 2, calendar FormEvent deprecated 1.
 - 실제 로그인/Google OAuth/사용자 CRUD/외부 HTTPS/부팅 복구는 아직 확인 필요. health 성공은 DB 연결 성공을 의미하지 않는다.
 - 개발 PC에서는 임시 테스트 환경만 사용했으며 운영 데이터를 변경하지 않았다.

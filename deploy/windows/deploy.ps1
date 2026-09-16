@@ -50,7 +50,8 @@ if (Test-Path $active) { Copy-Item $active (Join-Path $RuntimeRoot 'previous.txt
 [IO.File]::WriteAllText($active, $release)
 $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($task) {
-    Stop-ScheduledTask -TaskName $TaskName
+    & (Join-Path $PSScriptRoot 'stop-app.ps1') -RuntimeRoot $RuntimeRoot -TaskName $TaskName
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'run-app.ps1') -Destination $RuntimeRoot -Force
     Start-Sleep -Seconds 2
     Start-ScheduledTask -TaskName $TaskName
     $started = $false
@@ -60,7 +61,7 @@ if ($task) {
         } catch { Start-Sleep -Seconds 1 }
     }
     if (-not $started) {
-        Stop-ScheduledTask -TaskName $TaskName
+        & (Join-Path $PSScriptRoot 'stop-app.ps1') -RuntimeRoot $RuntimeRoot -TaskName $TaskName
         $previous = Join-Path $RuntimeRoot 'previous.txt'
         if (Test-Path $previous) {
             Copy-Item $previous $active -Force
