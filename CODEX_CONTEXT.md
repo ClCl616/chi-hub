@@ -188,7 +188,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - 삼성 캘린더 참고 일정 탐색/반복/수정, Notion 참고 Markdown 서식·블록 편집, 드라이브 추가 팝업·실제 폴더 계층, PC/태블릿/모바일 반응형 확장 완료. 외부 Samsung/Notion 계정 연동은 아님.
 - typecheck, 변경 파일 lint, production build/HTTP smoke 통과. mock 브라우저에서 저장 경합/재시도/Ctrl+S/Markdown HTML 차단, 서식·슬래시, 중첩 폴더 생성/파일 이동, 휴지통 복원/실패 복구/드롭, 반복 일정/수정 검사. 8개 패널 × 360/390/768/1024/1440px 가로 넘침 검사 통과. 날짜 단위 검사 3개 및 기존 worker 검사 3개 통과.
 - 새 migration 적용 전 합성 계정·폴더·파일로 SQL transaction rollback 검사: 계층 순환 차단, 재귀 삭제/복원, 삭제된 목적지 업로드 차단, 타 계정 조회/수정/소속 차단. 사용자 실자료 변경 없음. 적용 후 RLS/함수 권한 검증, Advisor 신규 경고 없음(기존 유출 비밀번호 보호 비활성화 1건).
-- 최신 확장 웹 배포: 검증 완료, Windows 서버 전달 진행 중. 이전 운영 웹은 6cd7d0c 빌드. 최종 배포 결과와 소스 동기화는 이 항목을 갱신한다. GitHub push는 요청 전 금지.
+- 최신 확장 웹 배포 완료: c695539, 실행 릴리스 20260922-191648-828-c69553950b99. 서버 npm audit 0건, CHI-HUB-App Running 및 loopback health 정상. 공개 HTTPS health/login/manifest 200, 미인증 folders/files/calendar-events 401 확인. 후속 문서 커밋까지 서버 소스/bundle 동기화. GitHub push는 하지 않음.
 - 기존 CHI-HUB-Trash는 NETWORK SERVICE, 매일 서버 현지 04:00. 키는 C:/Services/chi-hub-maintenance/trash.env, 앱 LOCAL SERVICE 접근 차단 유지. 새 worker는 폴더 정리까지 실행하며 작업/키 재등록 불필요.
 - 다음: 사용자 계정으로 로그인/OAuth 및 실자료 사용성 확인, 계획된 재부팅 복구 검증. 네이티브/워치 앱 및 보안 안내는 docs/SECURITY_AND_APPS.md. 새 보안 설정이나 외부 서비스 동기화는 이번 범위 아님.
 
