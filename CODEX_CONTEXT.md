@@ -5,13 +5,27 @@
 ## 새 PC / 새 Codex 채팅의 시작 순서
 
 1. `AGENTS.md`와 이 문서를 끝까지 읽고 `git status -sb`, `git log -7 --oneline`, 관련 코드를 확인한다. 기존 변경은 보존한다.
-2. **최신 소스는 GitHub가 아니라 Git bundle로 가져온다.** 확인한 GitHub main은 `4130e9d`(2026-09-16 문서)다. 2026-09-22 기능·DB·문서 변경은 로컬/운영 서버/bundle에만 있으며 GitHub push는 별도 요청 전 금지다.
-3. 최신 기능 커밋은 `c695539`, 직전 배포 기록 커밋은 `151e06f`. 이 인수인계 문서 커밋은 그 이후다. 서버 bundle의 main과 복원한 HEAD를 비교한다. 기능 커밋 이후 문서 전용 커밋 때문에 소스 HEAD와 실행 빌드가 다른 것은 정상이다.
+2. **2026-09-22 사용자 요청으로 최신 기능·DB·인수인계 문서를 GitHub main에 push했다.** 새 PC는 아래 GitHub clone/pull 절차로 복원할 수 있다. 이후 push도 별도 사용자 요청 범위에서 수행한다.
+3. 최신 기능 커밋은 `c695539`, 배포 기록은 `151e06f`, 인수인계 정리는 `4b0a829`. 이후 GitHub 동기화 안내 문서 커밋이 이어진다. 기능 커밋 이후 문서 전용 커밋 때문에 소스 HEAD와 실행 빌드가 다른 것은 정상이다.
 4. 새 PC에는 Git, Node 24 LTS(`>=24.13.0 <25`), npm을 설치한다. Tailscale/SSH 인증 및 `chi-server` 별칭은 별도로 준비한다. 저장소를 받는 것만으로 SSH 설정이나 환경 파일이 복원되지는 않는다.
 5. `npm.cmd ci` 실행 후 아래 실행/검증 절차를 따른다. 실제 앱 사용에는 `.env.example`을 참고한 PC 전용 `.env.local`이 필요하다. 운영 Supabase 설정을 사용하면 로컬 CRUD도 실데이터를 바꾼다.
 6. 서버 앱/Caddy/휴지통 작업/키 설정과 적용된 migration은 이미 준비되어 있다. 새 채팅에서 초기 설치나 키 입력을 반복하지 않는다. 이번 기능 구현과 운영 배포는 완료되었으며 남은 확인 사항은 마지막 절에 있다.
 
-### 새 빈 작업 폴더에 최신 소스 복원 (PowerShell)
+### GitHub에서 최신 소스 복원 (PowerShell)
+
+새 빈 작업 폴더의 상위 디렉터리에서 실행한다:
+
+```powershell
+git clone https://github.com/ClCl616/chi-hub.git
+Set-Location chi-hub
+git status -sb
+git log -7 --oneline
+npm.cmd ci
+```
+
+기존 clone은 사용자 변경을 먼저 보존하고 main에서 `git pull --ff-only origin main`으로 갱신한다. 분기가 갈라졌다면 강제 덮어쓰지 않는다. GitHub에는 비밀 값/SSH 설정/환경 파일이 없으므로 아래 환경 준비도 필요하다.
+
+### 대체 복원: Git bundle (PowerShell)
 
 SSH 접근이 준비된 새 PC에서 대상 폴더의 상위 디렉터리에서 실행한다:
 
@@ -28,7 +42,7 @@ npm.cmd ci
 
 - 서버 접근이 없으면 현재 개발 PC의 `outputs/chi-hub-windows.bundle`을 안전하게 전달받아 같은 방식으로 복원한다. 서버와 이 로컬 bundle에는 이 문서의 커밋까지 포함한다.
 - bundle에는 main과 Git 이력이 포함된다. `.env.local`, SSH 키, worker 키, node_modules, 빌드, `work/` QA 캡처/임시 스크립트는 포함되지 않는다. `clone -b main`을 사용한다.
-- GitHub clone/pull만 하면 이번 기능이 없는 이전 상태다. origin의 ahead/behind 숫자만으로 최신 여부를 판단하지 않는다. 필요하면 `git fetch origin`으로 원격 추적 정보를 갱신하되 push는 하지 않는다.
+- GitHub main에도 최신 작업을 전달했다. bundle 복원 직후 origin의 ahead/behind 숫자만으로 최신 여부를 판단하지 말고 필요하면 `git fetch origin`으로 원격 추적 정보를 갱신한다.
 
 기존 clone을 갱신할 때는 먼저 작업 트리가 깨끗한지와 현재 브랜치를 확인한 뒤 실행한다:
 
@@ -57,7 +71,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 ## 현재 운영 상태와 환경 구분
 
-이번 문서 정리에서 확인: 로컬/서버 소스는 시작 시 `151e06f`로 일치하고 양쪽 작업 트리는 깨끗했다. 원격 GitHub main은 `4130e9d`. 문서 정리 완료 후 문서 커밋과 bundle만 서버에 동기화하며 앱을 재빌드/재시작하지 않는다.
+2026-09-22 인수인계 정리 `4b0a829`까지 로컬/서버 소스 및 bundle을 동기화했고, 후속 사용자 요청으로 GitHub main에도 push했다. GitHub 동기화 안내 문서 커밋도 같은 경로로 전달한다. 이번에는 문서만 갱신하므로 앱을 재빌드/재시작하지 않는다.
 
 | 항목 | 현재 상태 |
 | --- | --- |
@@ -215,4 +229,5 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 - `c695539`: 캘린더 보기/시간/반복/수정, Tiptap 블록 Markdown, 실제 드라이브 폴더와 추가 메뉴, 반응형 확장. 운영 반영 완료.
 - `151e06f`: 해당 확장의 검증/배포 문서. 이후 인수인계 문서 정리 커밋이 이어진다.
 - `6cd7d0c`, `50e8b81`, `82aad99`: PC/모바일 분리, 메모 저장 수정, 날짜 팝업, 드롭/30일 휴지통, Caddy 보안 헤더, worker 계정 분리 및 배포 기록.
-- `4130e9d`: 마지막으로 확인한 GitHub main. 2026-09-16 Windows 자가 호스팅/도메인/브랜드 전환 후 문서. 상세 과거 이력은 git log를 확인한다.
+- `4b0a829` 및 후속 안내 문서: 실제 상태 기준 인수인계 정리 후 사용자 요청으로 GitHub main 동기화.
+- `4130e9d`: 2026-09-16 Windows 자가 호스팅/도메인/브랜드 전환 후 문서. 상세 과거 이력은 git log를 확인한다.
