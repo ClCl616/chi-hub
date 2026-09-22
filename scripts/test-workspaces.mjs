@@ -52,6 +52,8 @@ const writes = [];
 let failNextNote = false;
 let failNextDelete = false;
 const events = [];
+const folders = [];
+
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 await context.route('**/api/**', async (route) => {
   const request = route.request(),
@@ -83,13 +85,40 @@ await context.route('**/api/**', async (route) => {
     notes = [note, ...notes.filter((item) => item.id !== note.id)];
     return reply({ note }, method === 'POST' ? 201 : 200);
   }
+  if (url.pathname === '/api/folders') {
+    if (method === 'GET') return reply({ folders });
+    const body = request.postDataJSON();
+    if (method === 'POST')
+      folders.push({
+        id: crypto.randomUUID(),
+        name: body.name,
+        parent_id: body.parent_id,
+        deleted_at: null,
+        trash_root_id: null,
+      });
+    else {
+      const f = folders.find((f) => f.id === body.id);
+      if (f) {
+        if (method === 'DELETE') {
+          f.deleted_at = date;
+          f.trash_root_id = f.id;
+        } else if (body.action === 'restore') {
+          f.deleted_at = null;
+          f.trash_root_id = null;
+        } else f.name = body.name;
+      }
+    }
+    return reply({ ok: true });
+  }
   if (url.pathname === '/api/files') {
     if (method === 'GET')
       return reply({
         files: files.filter(
           (file) =>
             Boolean(file.deleted_at) ===
-            (url.searchParams.get('trash') === 'true'),
+              (url.searchParams.get('trash') === 'true') &&
+            (url.searchParams.get('trash') === 'true' ||
+              (file.folder_id ?? null) === url.searchParams.get('folder')),
         ),
       });
     if (method === 'DELETE') {
@@ -107,7 +136,9 @@ await context.route('**/api/**', async (route) => {
     if (method === 'PATCH')
       files = files.map((file) =>
         file.id === request.postDataJSON().id
-          ? { ...file, deleted_at: null }
+          ? request.postDataJSON().action === 'move'
+            ? { ...file, folder_id: request.postDataJSON().folder_id }
+            : { ...file, deleted_at: null }
           : file,
       );
     if (method === 'POST')
@@ -123,16 +154,15 @@ await context.route('**/api/**', async (route) => {
       });
     return reply({ ok: true });
   }
-  if (url.pathname === '/api/calendar') return reply({ records: events });
+  if (url.pathname === '/api/calendar') return reply({ records: [], events });
   if (url.pathname === '/api/calendar-events') {
     const body = request.postDataJSON();
-    events.push({
-      id: 'qa-event',
-      date: body.event_date,
-      type: '일정',
-      title: body.title,
-      detail: body.notes,
-    });
+    if (method === 'PATCH') {
+      Object.assign(
+        events.find((e) => e.id === body.id),
+        body,
+      );
+    } else events.push({ ...body, id: 'qa-event' });
     return reply({ ok: true });
   }
   if (url.pathname === '/api/campus-meals')
@@ -171,6 +201,9 @@ try {
   assert.equal(notes.length, 1, 'Rename does not create a new note');
   await page.getByRole('button', { name: '메모 작성' }).click();
   await page.getByLabel('메모 제목', { exact: true }).fill('저장 경합 테스트');
+  await page
+    .getByRole('button', { name: 'Markdown 원문', exact: true })
+    .click();
   await page
     .getByLabel('메모 내용', { exact: true })
     .fill(
@@ -232,6 +265,31 @@ try {
     () => notes.some((note) => note.title === '실패 후 재시도'),
     'Manual save retry',
   );
+  await page.getByRole('button', { name: '서식 편집', exact: true }).click();
+  await page.locator('.tiptap h1').waitFor();
+  assert.equal(await page.locator('.tiptap table').count(), 1);
+  await page.screenshot({
+    path: 'work/qa/rich-notes-mobile.png',
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  await page.screenshot({
+    path: 'work/qa/rich-notes-desktop.png',
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pause(350);
+  await page.getByLabel('서식 있는 메모 내용', { exact: true }).click();
+  await page.getByLabel('서식 있는 메모 내용', { exact: true }).fill('/h2');
+  await page.getByRole('menu', { name: '블록 명령' }).waitFor();
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Rich heading');
+  await page.keyboard.press('Control+s');
+  await waitFor(
+    () => notes.some((n) => n.content.includes('## Rich heading')),
+    'Slash block persisted as Markdown',
+  );
   await page.getByRole('button', { name: '메모 목록으로' }).click();
   await page.screenshot({ path: 'work/qa/library-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -250,7 +308,10 @@ try {
   await page.getByRole('button', { name: '휴지통', exact: true }).click();
   await page.getByRole('button', { name: '검증 문서.txt 복원' }).click();
   await page.getByText('파일을 복원했습니다.').waitFor();
-  await page.getByRole('button', { name: '내 드라이브', exact: true }).click();
+  await page
+    .getByRole('button', { name: '내 드라이브', exact: true })
+    .first()
+    .click();
   await page
     .getByRole('button', { name: '검증 문서.txt 휴지통으로 이동' })
     .waitFor();
@@ -274,6 +335,36 @@ try {
     .locator('.drive-file-info strong')
     .filter({ hasText: 'drop-test.txt' })
     .waitFor();
+  await page.getByRole('button', { name: '추가', exact: true }).click();
+  await page.getByRole('menuitem', { name: '폴더 추가', exact: true }).click();
+  await page.getByLabel('폴더 이름', { exact: true }).fill('자료');
+  await page.getByRole('button', { name: '폴더 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '자료', exact: true }).click();
+  await page.getByRole('heading', { name: '자료', exact: true }).waitFor();
+  assert.equal(await page.locator('.drive-item').count(), 0);
+  await page.getByRole('button', { name: '추가', exact: true }).click();
+  await page.getByRole('menuitem', { name: '폴더 추가' }).click();
+  await page.getByLabel('폴더 이름', { exact: true }).fill('하위 폴더');
+  await page.getByRole('button', { name: '폴더 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(folders[1].parent_id, folders[0].id);
+  await page
+    .getByRole('button', { name: '내 드라이브', exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole('button', { name: '검증 문서.txt 이동', exact: true })
+    .click();
+  await page
+    .getByLabel('이동할 폴더', { exact: true })
+    .selectOption(folders[0].id);
+  await page.getByRole('button', { name: '이동', exact: true }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '자료', exact: true }).click();
+  await page
+    .getByRole('button', { name: '검증 문서.txt 이동', exact: true })
+    .waitFor();
   await page.screenshot({ path: 'work/qa/drive-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await pause(350);
@@ -291,9 +382,25 @@ try {
   await page.locator('.calendar-day:not(.outside)').first().click();
   await page.getByRole('dialog').waitFor();
   await page.getByLabel('일정 제목').fill('팝업 일정');
+  await page.getByLabel('일정 반복').selectOption('weekly');
+  await page.getByLabel('일정 장소').fill('회의실');
   await page.getByRole('button', { name: '일정 저장', exact: true }).click();
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
   assert.equal(events.length, 1);
+  assert.ok(
+    (await page.locator('.calendar-event-chip').count()) > 1,
+    'Recurring instances displayed',
+  );
+  await page.getByRole('button', { name: '주', exact: true }).click();
+  assert.equal(await page.locator('.calendar-day').count(), 7);
+  await page.getByRole('button', { name: '일정 목록', exact: true }).click();
+  await page.locator('.agenda-day').first().click();
+  await page.getByRole('button', { name: '팝업 일정 수정' }).click();
+  await page.getByLabel('일정 제목').fill('수정 일정');
+  await page.getByRole('button', { name: '변경 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(events[0].title, '수정 일정');
+  await page.getByRole('button', { name: '월', exact: true }).click();
   await page.screenshot({
     path: 'work/qa/calendar-desktop.png',
     fullPage: true,
@@ -307,6 +414,30 @@ try {
   });
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  for (const width of [360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await pause(350);
+    for (const view of [
+      'focus',
+      'morning',
+      'calendar',
+      'notes',
+      'sleep',
+      'workouts',
+      'files',
+      'meals',
+    ]) {
+      await page.goto(base + '/?view=' + view);
+      await page.locator('.tab-view:visible').first().waitFor();
+      await pause(150);
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1,
+        ),
+        'No overflow: ' + view + ' ' + width,
+      );
+    }
+  }
   assert.deepEqual(
     errors,
     [],

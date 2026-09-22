@@ -20,3 +20,6 @@ const client = createClient(
 );
 const count = await purgeTrash(client);
 console.log(`Trash cleanup completed: ${count} expired files removed.`);
+
+const folderCleanup = await client.rpc('purge_expired_folders');
+if (folderCleanup.error) throw new Error('Folder cleanup failed.');

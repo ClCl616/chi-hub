@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('files')
       .select(
-        'id,name,storage_path,mime_type,size_bytes,created_at,deleted_at,purge_started_at',
+        'id,name,storage_path,mime_type,size_bytes,created_at,deleted_at,purge_started_at,folder_id,trash_root_id',
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -21,6 +21,12 @@ export async function GET(request: Request) {
     query = trash
       ? query.not('deleted_at', 'is', null)
       : query.is('deleted_at', null);
+    if (!trash) {
+      const folder = new URL(request.url).searchParams.get('folder');
+      query = folder
+        ? query.eq('folder_id', folder)
+        : query.is('folder_id', null);
+    }
     const { data, error } = await query;
     if (error) throw error;
     const files = await Promise.all(
@@ -73,6 +79,10 @@ export async function POST(request: Request) {
       .from('files')
       .insert({
         user_id: user.id,
+        folder_id:
+          typeof form.get('folder_id') === 'string'
+            ? form.get('folder_id') || null
+            : null,
         name: file.name.slice(0, 255),
         storage_path: path,
         mime_type: file.type || null,
@@ -137,10 +147,40 @@ export async function PATCH(request: Request) {
         { message: '파일을 선택해주세요.' },
         { status: 400 },
       );
+    if (body.action === 'move') {
+      const { data, error } = await supabase
+        .from('files')
+        .update({ folder_id: body.folder_id || null })
+        .eq('id', body.id)
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return NextResponse.json({ ok: !!data });
+    }
+    const { data: original, error: readError } = await supabase
+      .from('files')
+      .select('folder_id')
+      .eq('id', body.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (readError) throw readError;
+    let folder_id = original?.folder_id ?? null;
+    if (folder_id) {
+      const { data: parent, error: parentError } = await supabase
+        .from('drive_folders')
+        .select('id')
+        .eq('id', folder_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (parentError) throw parentError;
+      if (!parent) folder_id = null;
+    }
     const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
     const { data, error } = await supabase
       .from('files')
-      .update({ deleted_at: null })
+      .update({ deleted_at: null, folder_id, trash_root_id: null })
       .eq('id', body.id)
       .eq('user_id', user.id)
       .is('purge_started_at', null)

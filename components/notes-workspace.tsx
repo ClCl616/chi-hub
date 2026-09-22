@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -19,6 +19,11 @@ import Image from 'next/image';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { type Note, useNoteEditor } from '@/hooks/use-note-editor';
 import { DataNotice } from '@/components/feature-layout';
+const RichNoteEditor = lazy(() =>
+  import('@/components/rich-note-editor').then((module) => ({
+    default: module.RichNoteEditor,
+  })),
+);
 import { DrawingPad } from '@/components/drawing-pad';
 import { WorkspaceDialog } from '@/components/workspace-dialog';
 
@@ -40,6 +45,7 @@ export function NotesWorkspace() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('전체');
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [raw, setRaw] = useState(false);
   const [preview, setPreview] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -77,6 +83,7 @@ export function NotesWorkspace() {
     if (await editor.open(note)) {
       setEditing(true);
       setPreview(false);
+      setRaw(/<\/?[a-z][^>]*>|^\[\^/im.test(note?.content ?? ''));
       setError('');
     }
   }
@@ -101,25 +108,6 @@ export function NotesWorkspace() {
     } finally {
       setDeleting(false);
     }
-  }
-  function format(before: string, after = '') {
-    const start = text.current?.selectionStart ?? draft.content.length;
-    const end = text.current?.selectionEnd ?? start;
-    update({
-      content:
-        draft.content.slice(0, start) +
-        before +
-        draft.content.slice(start, end) +
-        after +
-        draft.content.slice(end),
-    });
-    requestAnimationFrame(() => {
-      text.current?.focus();
-      text.current?.setSelectionRange(
-        start + before.length,
-        end + before.length,
-      );
-    });
   }
   return (
     <div ref={root} className={`notes-studio ${editing ? 'is-editing' : ''}`}>
@@ -298,23 +286,23 @@ export function NotesWorkspace() {
           </header>
           {draft.content_type === 'markdown' && (
             <div className="markdown-toolbar">
-              <button onClick={() => format('# ')} disabled={preview}>
-                제목
-              </button>
-              <button onClick={() => format('**', '**')} disabled={preview}>
-                <b>굵게</b>
-              </button>
-              <button onClick={() => format('- ')} disabled={preview}>
-                목록
-              </button>
-              <button onClick={() => format('- [ ] ')} disabled={preview}>
-                체크박스
+              <button
+                aria-pressed={!raw && !preview}
+                onClick={() => {
+                  setRaw(false);
+                  setPreview(false);
+                }}
+              >
+                서식 편집
               </button>
               <button
-                onClick={() => format('```\n', '\n```')}
-                disabled={preview}
+                aria-pressed={raw && !preview}
+                onClick={() => {
+                  setRaw(true);
+                  setPreview(false);
+                }}
               >
-                코드
+                Markdown 원문
               </button>
               <button
                 aria-pressed={preview}
@@ -347,6 +335,17 @@ export function NotesWorkspace() {
                     {draft.content || '*내용을 입력해주세요.*'}
                   </ReactMarkdown>
                 </div>
+              ) : draft.content_type === 'markdown' && !raw ? (
+                <Suspense
+                  fallback={
+                    <p className="editor-hint">편집기를 준비하고 있습니다…</p>
+                  }
+                >
+                  <RichNoteEditor
+                    value={draft.content}
+                    onChange={(content) => update({ content })}
+                  />
+                </Suspense>
               ) : (
                 <textarea
                   ref={text}

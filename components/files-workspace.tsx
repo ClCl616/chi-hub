@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
+  Plus,
+  FolderPlus,
+  MoreHorizontal,
+  Pencil,
+  FolderInput,
+  ChevronRight,
   Download,
   File as FileIcon,
   FolderOpen,
@@ -15,9 +21,25 @@ import {
   Upload,
 } from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
+import { WorkspaceDialog } from '@/components/workspace-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { DataNotice } from '@/components/feature-layout';
 
+type DriveFolder = {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  deleted_at: string | null;
+  trash_root_id: string | null;
+};
 type StoredFile = {
+  folder_id: string | null;
+  trash_root_id: string | null;
   id: string;
   name: string;
   mime_type: string | null;
@@ -34,10 +56,19 @@ const sizeLabel = (bytes: number | null) =>
       ? `${Math.ceil(bytes / 1024)} KB`
       : `${(bytes / 1048576).toFixed(1)} MB`;
 export function FilesWorkspace() {
+  const [folder, setFolder] = useState<string | null>(null);
+  const folders = useApi<{ folders: DriveFolder[] }>('/api/folders');
+  const [folderDialog, setFolderDialog] = useState(false),
+    [renaming, setRenaming] = useState<DriveFolder | null>(null),
+    [folderName, setFolderName] = useState(''),
+    [folderBusy, setFolderBusy] = useState(false),
+    [folderError, setFolderError] = useState('');
+  const [moving, setMoving] = useState<StoredFile | null>(null),
+    [destination, setDestination] = useState('');
   const [trash, setTrash] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const records = useApi<{ files: StoredFile[] }>(
-    `/api/files${trash ? '?trash=true' : ''}`,
+    `/api/files${trash ? '?trash=true' : folder ? '?folder=' + encodeURIComponent(folder) : ''}`,
   );
   const refreshFiles = records.refresh;
   useEffect(() => {
@@ -79,6 +110,7 @@ export function FilesWorkspace() {
         status('업로드 중');
         const form = new FormData();
         form.append('file', file);
+        if (folder) form.append('folder_id', folder);
         await apiRequest('/api/files', { method: 'POST', body: form });
         status('완료');
       } catch (error) {
@@ -148,6 +180,103 @@ export function FilesWorkspace() {
           ? (b.size_bytes ?? 0) - (a.size_bytes ?? 0)
           : b.created_at.localeCompare(a.created_at),
     );
+  const allFolders = folders.data?.folders ?? [];
+  const shownFolders = allFolders
+    .filter((f) =>
+      trash
+        ? f.deleted_at && f.trash_root_id === f.id
+        : !f.deleted_at && f.parent_id === folder,
+    )
+    .filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
+  const crumbs: DriveFolder[] = [];
+  let parent = folder;
+  for (let i = 0; parent && i < 33; i++) {
+    const item = allFolders.find((f) => f.id === parent);
+    if (!item) break;
+    crumbs.unshift(item);
+    parent = item.parent_id;
+  }
+  const folderPath = (item: DriveFolder) => {
+    const names = [item.name];
+    let parent = item.parent_id;
+    for (let i = 0; parent && i < 33; i++) {
+      const p = allFolders.find((f) => f.id === parent);
+      if (!p) break;
+      names.unshift(p.name);
+      parent = p.parent_id;
+    }
+    return names.join(' / ');
+  };
+  async function saveFolder() {
+    setFolderBusy(true);
+    setFolderError('');
+    try {
+      await apiRequest('/api/folders', {
+        method: renaming ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: renaming?.id,
+          name: folderName,
+          parent_id: folder,
+        }),
+      });
+      await folders.refresh();
+      setFolderDialog(false);
+    } catch (e) {
+      setFolderError(
+        e instanceof Error ? e.message : '폴더를 저장하지 못했습니다.',
+      );
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+  async function trashFolder(item: DriveFolder) {
+    setFolderBusy(true);
+    setMessage('');
+    try {
+      await apiRequest('/api/folders', {
+        method: trash ? 'PATCH' : 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: item.id,
+          action: trash ? 'restore' : 'trash',
+        }),
+      });
+      await Promise.all([folders.refresh(), records.refresh()]);
+      setMessage(
+        trash
+          ? '폴더와 파일을 복원했습니다.'
+          : '폴더와 포함된 파일을 휴지통으로 이동했습니다.',
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : '처리하지 못했습니다.');
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+  async function moveFile() {
+    if (!moving) return;
+    setFolderBusy(true);
+    setFolderError('');
+    try {
+      await apiRequest('/api/files', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: moving.id,
+          action: 'move',
+          folder_id: destination || null,
+        }),
+      });
+      await records.refresh();
+      setMoving(null);
+      setMessage('파일을 이동했습니다.');
+    } catch (e) {
+      setFolderError(e instanceof Error ? e.message : '이동하지 못했습니다.');
+    } finally {
+      setFolderBusy(false);
+    }
+  }
   return (
     <div
       className={`drive-workspace ${dragging ? 'is-dragging' : ''}`}
@@ -180,26 +309,52 @@ export function FilesWorkspace() {
       }}
     >
       <aside className="drive-sidebar">
-        <button
-          className="drive-upload"
-          disabled={busy || trash}
-          onClick={() => input.current?.click()}
-        >
-          <Upload size={20} />
-          {busy ? '업로드 중…' : '파일 업로드'}
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="drive-upload"
+            disabled={busy || trash || folderBusy}
+          >
+            <Plus size={20} />
+            {busy ? '업로드 중…' : '추가'}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="drive-add-menu">
+            <DropdownMenuItem onClick={() => input.current?.click()}>
+              <Upload size={17} />
+              파일 추가
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setRenaming(null);
+                setFolderName('');
+                setFolderError('');
+                setFolderDialog(true);
+              }}
+            >
+              <FolderPlus size={17} />
+              폴더 추가
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <nav aria-label="드라이브 위치">
           <button
-            disabled={pending.length > 0}
+            disabled={pending.length > 0 || busy || folderBusy}
             className={!trash ? 'active' : ''}
-            onClick={() => setTrash(false)}
+            onClick={() => {
+              setTrash(false);
+              setFolder(null);
+              setQuery('');
+            }}
           >
             <HardDrive size={19} />내 드라이브
           </button>
           <button
-            disabled={pending.length > 0 || busy}
+            disabled={pending.length > 0 || busy || folderBusy}
             className={trash ? 'active' : ''}
-            onClick={() => setTrash(true)}
+            onClick={() => {
+              setTrash(true);
+              setQuery('');
+              void folders.refresh();
+            }}
           >
             <Trash2 size={19} />
             휴지통
@@ -215,7 +370,14 @@ export function FilesWorkspace() {
         <header className="library-toolbar">
           <div>
             <p className="card-label">MY DRIVE</p>
-            <h2>{trash ? '휴지통' : '내 드라이브'}</h2>
+            <h2>
+              {trash
+                ? '휴지통'
+                : folder
+                  ? (folders.data?.folders.find((f) => f.id === folder)?.name ??
+                    '폴더')
+                  : '내 드라이브'}
+            </h2>
           </div>
           <div className="file-view-actions">
             <button
@@ -234,6 +396,33 @@ export function FilesWorkspace() {
             </button>
           </div>
         </header>
+        {!trash && (
+          <nav className="drive-breadcrumbs" aria-label="폴더 경로">
+            <button
+              disabled={busy || folderBusy}
+              onClick={() => {
+                setFolder(null);
+                setQuery('');
+              }}
+            >
+              내 드라이브
+            </button>
+            {crumbs.map((item) => (
+              <span key={item.id}>
+                <ChevronRight size={14} />
+                <button
+                  disabled={busy || folderBusy}
+                  onClick={() => {
+                    setFolder(item.id);
+                    setQuery('');
+                  }}
+                >
+                  {item.name}
+                </button>
+              </span>
+            ))}
+          </nav>
+        )}
         <div className="library-filters">
           <label className="search-field">
             <Search size={18} />
@@ -298,6 +487,71 @@ export function FilesWorkspace() {
           error={records.error}
           onRetry={records.refresh}
         />
+        <DataNotice
+          loading={folders.loading}
+          error={folders.error}
+          onRetry={folders.refresh}
+        />
+        {shownFolders.length > 0 && (
+          <div className="drive-folders">
+            {shownFolders.map((item) => (
+              <article key={item.id} className="drive-folder">
+                <button
+                  className="folder-open"
+                  disabled={trash || busy || folderBusy}
+                  onClick={() => {
+                    setFolder(item.id);
+                    setQuery('');
+                  }}
+                >
+                  <FolderOpen size={24} />
+                  <span>{item.name}</span>
+                </button>
+                {trash ? (
+                  <button
+                    className="icon-button"
+                    aria-label={item.name + ' 복원'}
+                    disabled={
+                      folderBusy ||
+                      new Date(item.deleted_at!).getTime() + 30 * 86400000 <=
+                        now
+                    }
+                    onClick={() => void trashFolder(item)}
+                  >
+                    <RotateCcw size={17} />
+                  </button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="icon-button"
+                      aria-label={item.name + ' 폴더 메뉴'}
+                      disabled={busy || folderBusy}
+                    >
+                      <MoreHorizontal size={18} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setRenaming(item);
+                          setFolderName(item.name);
+                          setFolderError('');
+                          setFolderDialog(true);
+                        }}
+                      >
+                        <Pencil size={16} />
+                        이름 변경
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void trashFolder(item)}>
+                        <Trash2 size={16} />
+                        휴지통으로 이동
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
         <div className={`drive-items ${view}`}>
           {files.map((item) => {
             const expires = item.deleted_at
@@ -333,6 +587,19 @@ export function FilesWorkspace() {
                   </small>
                 </div>
                 <div className="drive-item-actions">
+                  {!trash && (
+                    <button
+                      aria-label={item.name + ' 이동'}
+                      disabled={busy || folderBusy}
+                      onClick={() => {
+                        setMoving(item);
+                        setDestination(folder ?? '');
+                        setFolderError('');
+                      }}
+                    >
+                      <FolderInput size={17} />
+                    </button>
+                  )}
                   {trash ? (
                     <button
                       aria-label={`${item.name} 복원`}
@@ -367,21 +634,24 @@ export function FilesWorkspace() {
             );
           })}
         </div>
-        {!records.loading && !records.error && !files.length && (
-          <div className="drive-empty">
-            <FolderOpen size={45} />
-            <h3>
-              {query
-                ? '검색 결과가 없습니다.'
-                : trash
-                  ? '휴지통이 비어 있습니다.'
-                  : '파일을 보관해보세요.'}
-            </h3>
-            {!trash && !query && (
-              <p>파일을 끌어다 놓거나 파일 업로드를 선택하세요.</p>
-            )}
-          </div>
-        )}
+        {!records.loading &&
+          !records.error &&
+          !files.length &&
+          !shownFolders.length && (
+            <div className="drive-empty">
+              <FolderOpen size={45} />
+              <h3>
+                {query
+                  ? '검색 결과가 없습니다.'
+                  : trash
+                    ? '휴지통이 비어 있습니다.'
+                    : '파일을 보관해보세요.'}
+              </h3>
+              {!trash && !query && (
+                <p>파일을 끌어다 놓거나 파일 업로드를 선택하세요.</p>
+              )}
+            </div>
+          )}
       </section>
       {dragging && (
         <div className="drop-overlay">
@@ -395,6 +665,72 @@ export function FilesWorkspace() {
           </strong>
         </div>
       )}
+      <WorkspaceDialog
+        open={folderDialog}
+        onOpenChange={(v) => {
+          if (!folderBusy) setFolderDialog(v);
+        }}
+        title={renaming ? '폴더 이름 변경' : '새 폴더'}
+        description="현재 위치에 자료를 정리할 폴더를 만드세요."
+      >
+        <form
+          className="stack-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void saveFolder();
+          }}
+        >
+          <input
+            aria-label="폴더 이름"
+            required
+            maxLength={120}
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+          />
+          <button className="submit-button" disabled={folderBusy}>
+            {folderBusy ? '저장 중…' : '폴더 저장'}
+          </button>
+          {folderError && <p role="alert">{folderError}</p>}
+        </form>
+      </WorkspaceDialog>
+      <WorkspaceDialog
+        open={!!moving}
+        onOpenChange={(v) => {
+          if (!v && !folderBusy) setMoving(null);
+        }}
+        title="파일 이동"
+        description={moving?.name ?? ''}
+      >
+        <form
+          className="stack-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void moveFile();
+          }}
+        >
+          <label>
+            이동할 폴더
+            <select
+              aria-label="이동할 폴더"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+            >
+              <option value="">내 드라이브</option>
+              {allFolders
+                .filter((f) => !f.deleted_at)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {folderPath(item)}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button className="submit-button" disabled={folderBusy}>
+            이동
+          </button>
+          {folderError && <p role="alert">{folderError}</p>}
+        </form>
+      </WorkspaceDialog>
     </div>
   );
 }

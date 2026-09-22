@@ -83,7 +83,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - TypeScript, React/React DOM/React Server DOM Webpack **19.2.8**
 - Vinext **1.0.0-beta.10**, Vite **8.3.0**, RSC plugin **0.5.34**
 - Tailwind 4, shadcn/Base UI, Lucide, Supabase JS / SSR, Oxlint/Oxfmt
-- Markdown: react-markdown 10.1.0 + remark-gfm 4.0.1, UI 회귀 검사용 devDependency playwright 1.62.1.
+- Markdown: Tiptap 3.31.3 (React/Markdown/StarterKit/TaskList/Table/Image/Placeholder, 정확한 버전 고정), react-markdown 10.1.0 + remark-gfm 4.0.1, UI 회귀 검사용 devDependency playwright 1.62.1.
 - Node **24 LTS** (`>=24.13.0 <25`)
 - `vite.config.ts`: Vinext + Tailwind만 사용. Sites/Cloudflare plugin/Workers 실행 의존성 제거.
 - `next.config.ts`: `output: 'standalone'`. `dist/standalone/server.js`와 런타임 의존성을 생성.
@@ -112,7 +112,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 
 ### 공통 셸
 
-- `app/page.tsx`: AppShell + DashboardWorkspace. globals.css → dashboard.css → workspace.css → desktop.css → mobile.css 적용. PC/모바일 메뉴는 components/layout에 별도 컴포넌트, 같은 URL·데이터·타이머/편집 상태 공유. 820px 기준 화면 전용 스타일 분리.
+- `app/page.tsx`: AppShell + DashboardWorkspace. globals.css → dashboard.css → workspace.css → desktop.css → mobile.css → enhancements.css 적용. PC/모바일 메뉴는 components/layout에 별도 컴포넌트, 같은 URL·데이터·타이머/편집 상태 공유. 820px 기준 화면 전용 스타일 분리.
 - 계획/집중·생활 관리·자료/정보 그룹 메뉴, 상단 연결 상태와 오늘 집중/루틴/할 일 요약.
 - API 변경 이벤트 후 상단 요약 갱신. 조회 실패는 0 대신 대시 표시.
 - 8개 `TabsContent keepMounted`로 비선택 화면은 숨기되 타이머/메모/폼 상태 보존.
@@ -127,11 +127,11 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 집중/짧은 휴식/긴 휴식, 시간 편집, 완료/삭제. 종료 시각을 `chi-hub-focus-timer-v2`에 저장해 새로고침/백그라운드 복원. 완료 창은 body portal이라 비선택 탭에서도 표시.
 - 일간/요일 반복 루틴 생성/완료/삭제와 날짜별 daily tasks. 체크 날짜/시각 기록.
 - 수면 타이머 시작/종료, 직접 기록, 품질/메모/평균. 사용자당 진행 기록 하나인 partial unique index.
-- 월간 6주 캘린더가 전체 폭 사용. 날짜 클릭 시 접근 가능한 dialog에서 당일 기록 확인/일정 추가·삭제, Esc 닫기·포커스 복귀. 일정·루틴·할 일·수면·집중 통합 타임라인.
+- 캘린더는 월/주/일정 목록, 오늘/날짜 이동, 검색/기록 종류 필터. 날짜 팝업에서 일정 추가/수정/삭제, 종일 또는 당일 시작·종료 시간, 장소/메모/색상, 매일·매주·매월·매년 반복과 종료일. 반복 일정은 전체 시리즈 단위 수정/삭제, 없는 날짜(31일/윤일)는 건너뜀. 모바일 주 보기는 세로 목록. 다일 일정/알림/외부 캘린더 동기화는 미구현.
 - 운동 제목/날짜/시간/메모, 삭제, 최근 7일 요약.
-- 메모는 카테고리·검색·고정 및 썸네일 격자/목록, 별도 문서 편집 화면. 기존 필기/스티커 유지. Markdown은 GFM 표/체크리스트/코드/링크 읽기 모드, raw HTML 실행 안 함.
+- 메모는 카테고리·검색·고정/격자·목록, 별도 문서 편집. Tiptap 서식 편집/Markdown 원문/읽기 모드, / 블록 메뉴(키보드 이동), 제목·목록·체크리스트·인용·코드·표·링크·실행 취소. Markdown 문자열로 저장하며 편집기는 지연 로드. HTML/각주가 포함된 기존 문서는 원문 모드로 열어 자동 변환을 피함. 지원하지 않는 복잡한 Markdown은 원문 사용. 기존 필기/스티커와 Ctrl+S/자동 저장 유지, 50,000자 초과는 잘라 저장하지 않고 오류 반환.
 - use-note-editor: 800ms 자동 저장, 저장 요청 직렬화, 생성 UUID 재사용/POST upsert로 응답 유실 재시도 시 중복 방지, PATCH 응답을 목록에 즉시 반영. Ctrl/⌘+S 즉시 저장, 목록 복귀/새 메모 전 저장 완료 확인. 미저장 내용이 있으면 페이지 이탈 경고.
-- 드라이브는 검색/유형 필터/정렬/격자·목록/드래그앤드롭, private-files와 사용자 경로 RLS, 500 MiB 제한. 폴더 계층은 이번에 구현하지 않았다.
+- 드라이브는 추가 버튼의 anchored 메뉴(파일/폴더), 중첩 폴더 생성·경로 탐색·이름 변경, 파일의 폴더 이동. 현재 폴더로 업로드/드롭, 검색/유형/정렬/격자·목록 유지. 폴더 삭제 시 활성 하위 폴더/파일을 원자적으로 30일 휴지통 이동, 복원 시 부모부터 복원. 별도로 이미 삭제했던 항목의 보관 기간은 유지. 부모가 없어진 파일/폴더는 루트로 복원. 폴더 자체의 다른 폴더로 이동 UI와 로컬 디렉터리 통째 업로드는 미구현.
 - 파일 삭제는 확인창 없이 낙관적으로 숨기고 deleted_at 기록, 실패 시 목록 복구. 휴지통에서 30일 이내 복원. 서명 다운로드 URL 5분, 목록 4분 갱신.
 - 30일 만료 정리는 scripts/purge-trash.mjs + trash-worker.mjs, CHI-HUB-Trash 일일 작업(04:00). 복원/삭제 경합을 claim으로 방지, Storage API 성공 후 DB 삭제. 서버 전용 키·보호 ACL·NETWORK SERVICE 실행 계정으로 등록 완료, 최초 task 실행 결과 0 확인. 앱 LOCAL SERVICE에는 worker 키 접근 권한 없음.
 - 학식 UI는 대전대학교만 제공. 저장값 cbnu/hufs도 dju로 복원.
@@ -141,7 +141,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 
 ## 데이터 모델
 
-supabase/migrations에 0001~0005와 20260922092822_drive_trash.sql이 있다. 새 변경은 새 migration으로 추가한다.
+supabase/migrations에 0001~0005, 20260922092822_drive_trash.sql, 20260922101159_calendar_details_and_drive_folders.sql이 있다. 새 변경은 새 migration으로 추가한다.
 
 1. profiles, focus_sessions, sleep_logs, routines, routine_checks, workout_logs, notes, files, private Storage/RLS
 2. 진행 중 수면, 사용자당 하나 제한, 500 MiB 파일 제한
@@ -149,6 +149,8 @@ supabase/migrations에 0001~0005와 20260922092822_drive_trash.sql이 있다. �
 4. calendar_events
 5. 메모 유형/카테고리/필기
 6. 20260922092822_drive_trash: deleted_at/purge_started_at, 30일 보관 trigger, service_role 전용 만료 claim RPC. 운영 적용·임시 테이블 롤백 검사 완료(사용자 파일 변경 없음).
+
+7. 20260922101159_calendar_details_and_drive_folders: calendar_events 시간/장소/색상/반복, drive_folders + files.folder_id/trash_root_id. 소유자 복합 FK/RLS, 계층 순환·삭제된 목적지 차단 trigger, 계정별 advisory lock, 원자적 폴더 휴지통 RPC, 서비스 전용 만료 폴더 정리. 운영 적용 및 합성 자료 transaction rollback 검증 완료. worker는 Storage 파일 정리가 성공한 뒤 비어 있는 만료 폴더를 정리한다.
 
 API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위를 제한한다.
 2026-09-22 운영 테이블 구조·RLS·비공개 Storage를 조회했고 새 휴지통 migration을 적용했다. 기존 0001~0005는 migration history에 없으므로 db push로 다시 실행하지 않는다. 로컬 CRUD도 운영 데이터를 변경하므로 테스트를 최소화한다.
@@ -181,17 +183,14 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - 개발 PC에서는 임시 테스트 환경만 사용했으며 운영 데이터를 변경하지 않았다.
 - 2026-09-15 UI의 8개 탭 × 3개 크기, 상태 보존, 키보드, 타이머 portal, 요약 갱신 QA는 이전 작업의 테스트 API 검증 기록이다. 이번에 전체 UI QA를 반복한 것은 아니다.
 
-## 2026-09-22 작업 결과 / 현재 다음 단계
+## 2026-09-22 최신 확장 작업 / 현재 다음 단계
 
-- PC/모바일 UI 분리, 캘린더 팝업, 메모 저장 수정·UI·Markdown·단축키, 드라이브 UI·드롭·휴지통 코드 완료. 문구 교체 및 Caddy 보안 헤더 추가. **웹/Caddy/자동 삭제 작업까지 운영 반영 완료**. 파일 삭제는 휴지통 이동이며 30일 보관 후 일일 작업으로 정리된다.
-- typecheck, dummy production build/HTTP smoke, 변경 파일 lint, PowerShell syntax, 브라우저 UI 회귀(1440/390px), worker 단위 검사 3개, SQL 임시 테이블 롤백 검사 통과. npm audit 0건. 전체 lint는 기존 calendar any 1, routines unknown String 2의 3건만 남음.
-- 브라우저 테스트는 API mock 사용. 제목 수정 시 동일 ID 유지, POST 중 추가 편집·Ctrl+S·재시도·Markdown HTML 차단·화면 크기 변경 상태 유지·휴지통 복원/실패 복구·드롭 업로드·캘린더 팝업 검증. work/qa 캡처 확인. 실사용 계정/운영 Storage CRUD 테스트는 하지 않음.
-- 웹 실행 릴리스: 20260922-184026-884-6cd7d0c483e2. 이후 50e8b81은 worker 계정 분리, 후속 커밋은 문서 전용이므로 웹 재빌드 불필요. 로컬/서버 소스는 최종 문서까지 bundle 동기화, GitHub push는 하지 않음.
-- Caddy 기존 설정 백업 후 validate/reload 완료. 공개 HTTPS health/login/manifest 200, 미인증 files 401, 새 설명 문구 및 HSTS/nosniff/frame DENY 확인.
-- CHI-HUB-Trash: NETWORK SERVICE, 매일 서버 현지 시각 04:00, 최초 실행 성공(LastTaskResult 0), 다음 실행 2026-09-23 04:00. 기존 사용자 파일을 인위적으로 만료시키거나 삭제하는 검증은 하지 않음.
-- 다음: 사용자 계정으로 로그인/OAuth/기존 자료 조회 및 새 UI 실사용 확인, 계획된 재부팅 복구 검증. GitHub push는 요청 전 금지.
-- 휴지통 키는 앱 공개 env와 분리. 서버 전용 파일 C:/Services/chi-hub-maintenance/trash.env에 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY만 설정, 실제 값 기록 금지. 상세 절차 deploy/windows/README.md.
-- Supabase security Advisor: 유출 비밀번호 보호 비활성화 경고 1건. 전체 사용자 테이블 10개 RLS 및 비공개 bucket 확인. 가입 제한/MFA/백업/서버 방화벽 현황 확인과 모바일·워치 확장 안내는 docs/SECURITY_AND_APPS.md. 네이티브 앱은 이번 범위에서 생성하지 않음.
+- 삼성 캘린더 참고 일정 탐색/반복/수정, Notion 참고 Markdown 서식·블록 편집, 드라이브 추가 팝업·실제 폴더 계층, PC/태블릿/모바일 반응형 확장 완료. 외부 Samsung/Notion 계정 연동은 아님.
+- typecheck, 변경 파일 lint, production build/HTTP smoke 통과. mock 브라우저에서 저장 경합/재시도/Ctrl+S/Markdown HTML 차단, 서식·슬래시, 중첩 폴더 생성/파일 이동, 휴지통 복원/실패 복구/드롭, 반복 일정/수정 검사. 8개 패널 × 360/390/768/1024/1440px 가로 넘침 검사 통과. 날짜 단위 검사 3개 및 기존 worker 검사 3개 통과.
+- 새 migration 적용 전 합성 계정·폴더·파일로 SQL transaction rollback 검사: 계층 순환 차단, 재귀 삭제/복원, 삭제된 목적지 업로드 차단, 타 계정 조회/수정/소속 차단. 사용자 실자료 변경 없음. 적용 후 RLS/함수 권한 검증, Advisor 신규 경고 없음(기존 유출 비밀번호 보호 비활성화 1건).
+- 최신 확장 웹 배포: 검증 완료, Windows 서버 전달 진행 중. 이전 운영 웹은 6cd7d0c 빌드. 최종 배포 결과와 소스 동기화는 이 항목을 갱신한다. GitHub push는 요청 전 금지.
+- 기존 CHI-HUB-Trash는 NETWORK SERVICE, 매일 서버 현지 04:00. 키는 C:/Services/chi-hub-maintenance/trash.env, 앱 LOCAL SERVICE 접근 차단 유지. 새 worker는 폴더 정리까지 실행하며 작업/키 재등록 불필요.
+- 다음: 사용자 계정으로 로그인/OAuth 및 실자료 사용성 확인, 계획된 재부팅 복구 검증. 네이티브/워치 앱 및 보안 안내는 docs/SECURITY_AND_APPS.md. 새 보안 설정이나 외부 서비스 동기화는 이번 범위 아님.
 
 ## 이전 운영 상태 (2026-09-16 확인 기록)
 
@@ -209,6 +208,7 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 
 ## 최근 핵심 이력
 
+- 2026-09-22 후속: 캘린더 반복/시간/수정/보기 전환, Tiptap 블록 Markdown 편집, 드라이브 폴더와 추가 메뉴, 5개 화면 폭 반응형 검증.
 - 2026-09-22: PC/모바일 표시 구조 분리, 메모/드라이브 UI 개편 및 저장 수정, 캘린더 날짜 팝업, 30일 휴지통 DB 적용. 앱·Caddy·자동 정리 worker 배포 및 서비스 계정 실행 검증 완료.
 
 - 2026-09-16: CHI Toolbox 명칭 및 chitoolbox.com 전환, 새 공유 이미지, 서버 배포와 공개 HTTPS 검증 완료.

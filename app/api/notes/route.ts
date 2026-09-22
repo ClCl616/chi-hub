@@ -35,6 +35,14 @@ export async function POST(request: Request) {
       string,
       string | number | boolean | null | undefined
     >;
+    if (typeof body.content === 'string' && body.content.length > 50000)
+      return NextResponse.json(
+        {
+          message:
+            '메모는 최대 50,000자까지 저장할 수 있습니다. 내용을 줄여주세요.',
+        },
+        { status: 400 },
+      );
     const title = String(body.title ?? '')
       .trim()
       .slice(0, 120);
@@ -88,6 +96,14 @@ export async function PATCH(request: Request) {
       string,
       string | number | boolean | null | undefined
     >;
+    if (typeof body.content === 'string' && body.content.length > 50000)
+      return NextResponse.json(
+        {
+          message:
+            '메모는 최대 50,000자까지 저장할 수 있습니다. 내용을 줄여주세요.',
+        },
+        { status: 400 },
+      );
     const id = String(body.id ?? '');
     if (!id)
       return NextResponse.json(
