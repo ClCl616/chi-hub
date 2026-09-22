@@ -121,7 +121,7 @@ DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변
 1. 검증된 커밋을 기존 bundle/SSH 절차로 전달하고 `deploy.ps1`로 앱을 배포한다.
 2. 저장소의 Caddyfile을 운영 경로로 복사하기 전 기존 설정을 백업하고 `caddy validate` 후 reload한다. 추가된 보안 헤더를 공개 HTTPS 응답에서 확인한다.
 3. `C:\Services\chi-hub-maintenance\trash.env`를 서버에만 만든다. 키 이름은 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`이며 실제 값은 관리자에게 안전한 경로로 입력받는다. 이 파일은 앱 `.env.local`과 다르며 release/Git에 복사하지 않는다.
-4. maintenance 폴더의 상속 ACL을 제거하고 관리자·배포 사용자·SYSTEM에 제어권, LOCAL SERVICE에 읽기 권한만 부여한다. LOCAL SERVICE에는 소스의 scripts 및 node_modules 읽기/실행 권한도 필요하다. 일반 사용자/Everyone의 키 읽기 권한이 없는지 확인한다.
+4. maintenance 폴더의 상속 ACL을 제거하고 관리자·배포 사용자·SYSTEM에 제어권, NETWORK SERVICE에 읽기 권한만 부여한다. 정리 작업은 웹 앱(LOCAL SERVICE)과 별도 계정인 NETWORK SERVICE로 실행한다. NETWORK SERVICE에는 소스의 scripts 및 node_modules 읽기/실행 권한도 필요하다. 일반 사용자/Everyone의 키 읽기 권한이 없는지 확인한다.
 5. 관리자 PowerShell에서 `deploy/windows/install-trash-task.ps1` 실행. `CHI-HUB-Trash`는 서버 현지 시각 매일 04:00에 실행하며, 중단된 실행은 복구 후 실행하고 실패는 20분 간격으로 재시도한다.
 6. 최초 실행은 키/권한을 검증한 뒤 `Start-ScheduledTask -TaskName CHI-HUB-Trash`로 수행하고 `Get-ScheduledTaskInfo`의 결과 0을 확인한다. 실행은 실제 30일 만료 파일을 영구 삭제하므로 날짜를 앞당기거나 사용자 파일로 인위적인 만료 테스트를 하지 않는다.
 

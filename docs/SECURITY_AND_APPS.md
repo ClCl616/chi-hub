@@ -20,7 +20,7 @@
 5. DB와 실제 Storage 파일을 별도로 백업하고 복구를 시험한다. 30일 휴지통은 백업을 대신하지 않는다. 휴지통 보관 중인 파일도 Storage 용량을 사용한다.
 6. 필요 시 외부 프록시/WAF로 봇·과도한 요청을 제한한다. 사용 서비스 변경과 DNS 전환은 별도 결정 사항이며 이번에 변경하지 않았다.
 
-휴지통 정리 작업은 모든 사용자의 만료된 파일에 접근해야 하므로 서버 전용 키를 사용한다. 앱 `.env.local`, 브라우저 번들, Git, 로그에 넣지 않고 `C:\Services\chi-hub-maintenance\trash.env`에 따로 보관한다. 관리자·배포 사용자·SYSTEM·LOCAL SERVICE만 읽을 수 있도록 ACL을 제한한다.
+휴지통 정리 작업은 모든 사용자의 만료된 파일에 접근해야 하므로 서버 전용 키를 사용한다. 앱 `.env.local`, 브라우저 번들, Git, 로그에 넣지 않고 `C:\Services\chi-hub-maintenance\trash.env`에 따로 보관한다. 관리자·배포 사용자·SYSTEM·NETWORK SERVICE만 읽을 수 있도록 ACL을 제한한다. 웹 앱의 LOCAL SERVICE에는 이 키 파일 접근 권한을 주지 않는다.
 
 ## 모바일 및 워치 앱
 
