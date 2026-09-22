@@ -38,4 +38,5 @@ next-env.d.ts
 /outputs/
 *.tsbuildinfo
 /work/
+/supabase/.temp/
 /.openai/*.tar.gz

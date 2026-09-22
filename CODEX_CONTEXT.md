@@ -1,15 +1,15 @@
 # Project Context
 
-> 마지막 정리: 2026-09-16 (Asia/Seoul). 실제 코드와 Git 상태를 먼저 확인한다.
+> 마지막 정리: 2026-09-22 (Asia/Seoul). 실제 코드와 Git 상태를 먼저 확인한다.
 
 ## 새 PC / 새 Codex 채팅에서 시작하기
 
 1. 이 문서와 AGENTS.md를 끝까지 읽고 실제 git status, 최근 커밋, 관련 소스를 확인한다. 서버 설정이나 migration을 처음부터 다시 설치하지 않는다.
 2. **2026-09-16 사용자 요청으로 main을 GitHub에 push했다.** Windows 전환/브랜드 변경/인수인계 문서는 GitHub clone 또는 pull로 받을 수 있다. 이후 push도 별도 사용자 요청 범위에서 수행한다.
-3. 최신 소스는 GitHub main에서 받으며, Git bundle은 대체 전달 수단이다. bundle에는 추적된 소스와 Git 이력만 포함되며 환경 파일, SSH 키, node_modules, 빌드, work/ QA 산출물은 포함되지 않는다.
+3. GitHub main에는 2026-09-16 문서까지 있다. 2026-09-22 변경은 로컬 커밋/bundle에만 있으며 아직 push하지 않았다. Git bundle은 대체 전달 수단이다. bundle에는 추적된 소스와 Git 이력만 포함되며 환경 파일, SSH 키, node_modules, 빌드, work/ QA 산출물은 포함되지 않는다.
 4. 새 PC에 Git과 Node 24 LTS를 설치하고, Tailscale 접근 및 OpenSSH 인증을 별도로 구성한다. chi-server는 현재 PC의 SSH 별칭이므로 새 PC에 자동으로 생기지 않는다. 서버 호스트/사용자/인증 정보를 안전하게 설정하고 ssh chi-server 접속부터 확인한다. 비밀번호나 개인 키를 채팅에 요청하지 않는다.
 5. 저장소에서 npm.cmd ci 실행. 실제 앱 개발 시 .env.example을 참고해 새 PC 전용 .env.local을 별도 준비하고 로컬 사이트 주소를 사용한다. 기존 파일은 덮어쓰지 않는다. 운영 Supabase 값을 쓰면 로컬 CRUD도 실데이터를 변경한다.
-6. 다음 작업은 실제 로그인/OAuth 검증과 계획된 재부팅 후 복구 확인이다. 완료 보고가 없으므로 이미 성공했다고 가정하지 않는다.
+6. 현재 PC의 SSH 설정과 서버 휴지통 worker 키 설정을 준비한 뒤 2026-09-22 UI 개편 커밋을 배포해야 한다. 실제 로그인/OAuth 검증과 계획된 재부팅 복구 확인도 남아 있다.
 
 ### 최신 소스 가져오기 (새 PC PowerShell)
 
@@ -61,13 +61,13 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 서비스 주소: `https://chitoolbox.com` (DNS/공개 HTTPS 연결 확인). Tailscale + SSH는 서버 관리 전용이며 사용자는 브라우저로 도메인에 접속한다.
 - 여러 PC(집/랩실/노트북)에서 개발하고 검증된 Git 커밋만 운영 서버에 전달한다.
 - 기존 Supabase Auth/DB/Storage를 유지한다. DB/schema 변경이나 데이터 이전은 이번 전환에 없다.
-- 2026-09-16 명칭 변경 승인: 앱 이름 CHI Toolbox, 화면 로고 CHI TOOLBOX, 소개 문구 “나의 일상을 위한 도구 상자”. 기존 C 아이콘/기능/데이터 유지. 내부 package, 저장 키, 서버 폴더와 작업/서비스 이름은 chi-hub/CHI-HUB를 유지한다.
+- 2026-09-16 명칭 변경 승인: 앱 이름 CHI Toolbox, 화면 로고 CHI TOOLBOX, 소개 문구는 2026-09-22에 “모든 것을 한 곳에서. 편리하게.”로 변경. 기존 C 아이콘/기능/데이터 유지. 내부 package, 저장 키, 서버 폴더와 작업/서비스 이름은 chi-hub/CHI-HUB를 유지한다.
 - 기존 밝은 배경·검정·라임 색상을 유지한다. **8개 기능 중 선택한 화면 하나만 표시**하며 별도 요약 탭이나 전체 패널 나열로 되돌리지 않는다.
 - 학식 UI는 대전대학교만 유지한다. 다른 학교 버튼을 임의로 복원하지 않는다.
 
 ## 저장소 / 환경
 
-- 개발 PC 경로: `C:\Users\AIDIS3\Archive\Projects\chi-hub`.
+- 현재 개발 PC 경로: `C:\Archive\Project\chi-hub`. 이전 PC 경로와 다르다. 이 PC에서 `chi-server` SSH 호스트 해석 실패(2026-09-22)로 서버 접근 설정 필요.
 - 서버 소스 경로: `C:\Services\chi-hub`. SSH alias: `chi-server` (개인 키/계정 정보는 별도 관리).
 - 서버는 Node 24.21.0, npm 11.19.0, Git 설치 및 clone 완료. 관리자 SSH 접근 확인.
 - Caddy 경로: `C:\Services\chi-hub-caddy`; Caddyfile, data(인증서), logs를 사용한다. Windows 방화벽 CHI-HUB-Web은 Caddy 실행 파일의 TCP 80/443만 허용한다.
@@ -75,14 +75,15 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 사용자 확인으로 공유기의 서버 내부 IP 예약 완료. 공인 IP와 WAN IP 일치, 새 .com DNS A 레코드와 공개 HTTPS 연결 확인. IP/MAC 값은 기록하지 않는다.
 - 공인 IP는 DHCP이므로 변경 가능. DNS 자동 갱신은 아직 구성하지 않았다.
 - 개발 PC에 `.env.local` 없음. 서버는 사용자가 입력한 설정으로 build 및 Supabase Auth settings 조회 HTTP 200을 확인했다. 실제 값은 출력하지 않았다.
-- 개발 PC의 node는 Codex bundled runtime이고 npm은 PATH에 없다. 임시 `work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 node로 실행했다. 서버에는 표준 npm.cmd가 있다.
-- 현재 저장소 `core.longpaths=true`. work/에 과거 임시 QA 파일이 있으나 공식 테스트 스위트가 아니다.
+- 현재 PC Node는 Codex bundled 24.19.0이며 npm은 PATH에 없다. `node work/npm-tool/package/bin/npm-cli.js`(11.19.0)로 npm을 실행하고 npm ci 완료. 이 임시 경로는 Git에 없으므로 새 PC는 표준 Node/npm 설치 권장. 서버에는 표준 npm.cmd가 있다.
+- 현재 PC 저장소에는 `core.longpaths` 명시 설정이 없다. work/는 임시 도구와 QA 캡처로 Git 제외. 재실행 가능한 검사는 scripts/test-workspaces.mjs 및 scripts/trash-worker.test.mjs.
 
 ## 스택 / 주요 파일
 
 - TypeScript, React/React DOM/React Server DOM Webpack **19.2.8**
 - Vinext **1.0.0-beta.10**, Vite **8.3.0**, RSC plugin **0.5.34**
 - Tailwind 4, shadcn/Base UI, Lucide, Supabase JS / SSR, Oxlint/Oxfmt
+- Markdown: react-markdown 10.1.0 + remark-gfm 4.0.1, UI 회귀 검사용 devDependency playwright 1.62.1.
 - Node **24 LTS** (`>=24.13.0 <25`)
 - `vite.config.ts`: Vinext + Tailwind만 사용. Sites/Cloudflare plugin/Workers 실행 의존성 제거.
 - `next.config.ts`: `output: 'standalone'`. `dist/standalone/server.js`와 런타임 의존성을 생성.
@@ -111,7 +112,7 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 
 ### 공통 셸
 
-- `app/page.tsx`: AppShell + DashboardWorkspace. globals.css 다음 dashboard.css 적용.
+- `app/page.tsx`: AppShell + DashboardWorkspace. globals.css → dashboard.css → workspace.css → desktop.css → mobile.css 적용. PC/모바일 메뉴는 components/layout에 별도 컴포넌트, 같은 URL·데이터·타이머/편집 상태 공유. 820px 기준 화면 전용 스타일 분리.
 - 계획/집중·생활 관리·자료/정보 그룹 메뉴, 상단 연결 상태와 오늘 집중/루틴/할 일 요약.
 - API 변경 이벤트 후 상단 요약 갱신. 조회 실패는 0 대신 대시 표시.
 - 8개 `TabsContent keepMounted`로 비선택 화면은 숨기되 타이머/메모/폼 상태 보존.
@@ -126,12 +127,13 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 - 집중/짧은 휴식/긴 휴식, 시간 편집, 완료/삭제. 종료 시각을 `chi-hub-focus-timer-v2`에 저장해 새로고침/백그라운드 복원. 완료 창은 body portal이라 비선택 탭에서도 표시.
 - 일간/요일 반복 루틴 생성/완료/삭제와 날짜별 daily tasks. 체크 날짜/시각 기록.
 - 수면 타이머 시작/종료, 직접 기록, 품질/메모/평균. 사용자당 진행 기록 하나인 partial unique index.
-- 월간 6주 캘린더, 일정 생성/삭제. 일정·루틴·할 일·수면·집중 통합 타임라인. 변경 이벤트 후 재조회, 로컬 날짜 사용.
+- 월간 6주 캘린더가 전체 폭 사용. 날짜 클릭 시 접근 가능한 dialog에서 당일 기록 확인/일정 추가·삭제, Esc 닫기·포커스 복귀. 일정·루틴·할 일·수면·집중 통합 타임라인.
 - 운동 제목/날짜/시간/메모, 삭제, 최근 7일 요약.
-- 메모 Markdown/스티커/필기, 카테고리/검색/고정/미리보기/삭제.
-- 메모 자동 저장은 실제 변경만, 800ms debounce, 저장 중/저장됨 각각 최소 1.5초 후 0.4초 fade.
-- 새 메모 빈 내용 미저장/자동 제목, 전환 시 즉시 저장 요청, 자체 삭제 모달 및 완전한 새 draft 초기화 유지.
-- 드라이브는 private-files Storage, 사용자 ID 경로/RLS, 다중 업로드/다운로드/삭제, 목록/그리드/이미지 미리보기. 500 MiB 제한.
+- 메모는 카테고리·검색·고정 및 썸네일 격자/목록, 별도 문서 편집 화면. 기존 필기/스티커 유지. Markdown은 GFM 표/체크리스트/코드/링크 읽기 모드, raw HTML 실행 안 함.
+- use-note-editor: 800ms 자동 저장, 저장 요청 직렬화, 생성 UUID 재사용/POST upsert로 응답 유실 재시도 시 중복 방지, PATCH 응답을 목록에 즉시 반영. Ctrl/⌘+S 즉시 저장, 목록 복귀/새 메모 전 저장 완료 확인. 미저장 내용이 있으면 페이지 이탈 경고.
+- 드라이브는 검색/유형 필터/정렬/격자·목록/드래그앤드롭, private-files와 사용자 경로 RLS, 500 MiB 제한. 폴더 계층은 이번에 구현하지 않았다.
+- 파일 삭제는 확인창 없이 낙관적으로 숨기고 deleted_at 기록, 실패 시 목록 복구. 휴지통에서 30일 이내 복원. 서명 다운로드 URL 5분, 목록 4분 갱신.
+- 30일 만료 정리는 scripts/purge-trash.mjs + trash-worker.mjs, CHI-HUB-Trash 일일 작업(04:00). 복원/삭제 경합을 claim으로 방지, Storage API 성공 후 DB 삭제. 작업 등록/키 설정은 아직 미완료이므로 자동 정리가 가동된 것으로 말하지 않는다.
 - 학식 UI는 대전대학교만 제공. 저장값 cbnu/hufs도 dju로 복원.
 - 대전대 공식 주간 HTML의 혜화문화관/제2생활관/HRC 파싱. 충북대 파서와 한국외대 위치 안내 API는 서버에 유지.
 - 한국외대 날짜별 메뉴는 미확인으로 추정하지 않는다. UI 버튼 복원 없이 요청이 있을 때만 조사.
@@ -139,16 +141,17 @@ CHI Toolbox는 한국어 모바일 우선 개인용 PWA다. 타이머, 루틴/�
 
 ## 데이터 모델
 
-supabase/migrations에 0001~0005가 있으며 새 변경은 다음 migration으로 추가한다.
+supabase/migrations에 0001~0005와 20260922092822_drive_trash.sql이 있다. 새 변경은 새 migration으로 추가한다.
 
 1. profiles, focus_sessions, sleep_logs, routines, routine_checks, workout_logs, notes, files, private Storage/RLS
 2. 진행 중 수면, 사용자당 하나 제한, 500 MiB 파일 제한
 3. 반복 필드와 daily_tasks
 4. calendar_events
 5. 메모 유형/카테고리/필기
+6. 20260922092822_drive_trash: deleted_at/purge_started_at, 30일 보관 trigger, service_role 전용 만료 claim RPC. 운영 적용·임시 테이블 롤백 검사 완료(사용자 파일 변경 없음).
 
 API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위를 제한한다.
-실제 운영 migration 적용 여부는 코드만으로 단정할 수 없다. 로컬 CRUD도 운영 데이터를 변경하므로 테스트를 최소화한다.
+2026-09-22 운영 테이블 구조·RLS·비공개 Storage를 조회했고 새 휴지통 migration을 적용했다. 기존 0001~0005는 migration history에 없으므로 db push로 다시 실행하지 않는다. 로컬 CRUD도 운영 데이터를 변경하므로 테스트를 최소화한다.
 
 ## Windows 배포 절차 / 운영 원칙
 
@@ -178,7 +181,16 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - 개발 PC에서는 임시 테스트 환경만 사용했으며 운영 데이터를 변경하지 않았다.
 - 2026-09-15 UI의 8개 탭 × 3개 크기, 상태 보존, 키보드, 타이머 portal, 요약 갱신 QA는 이전 작업의 테스트 API 검증 기록이다. 이번에 전체 UI QA를 반복한 것은 아니다.
 
-## 현재 운영 상태 / 다음 단계
+## 2026-09-22 작업 결과 / 현재 다음 단계
+
+- PC/모바일 UI 분리, 캘린더 팝업, 메모 저장 수정·UI·Markdown·단축키, 드라이브 UI·드롭·휴지통 코드 완료. 문구 교체 및 Caddy 보안 헤더 추가. **웹/Caddy/자동 삭제 작업은 아직 운영 배포 전**. 기존 운영 앱의 파일 삭제는 여전히 영구 삭제다.
+- typecheck, dummy production build/HTTP smoke, 변경 파일 lint, PowerShell syntax, 브라우저 UI 회귀(1440/390px), worker 단위 검사 3개, SQL 임시 테이블 롤백 검사 통과. npm audit 0건. 전체 lint는 기존 calendar any 1, routines unknown String 2의 3건만 남음.
+- 브라우저 테스트는 API mock 사용. 제목 수정 시 동일 ID 유지, POST 중 추가 편집·Ctrl+S·재시도·Markdown HTML 차단·화면 크기 변경 상태 유지·휴지통 복원/실패 복구·드롭 업로드·캘린더 팝업 검증. work/qa 캡처 확인. 실사용 계정/운영 Storage CRUD 테스트는 하지 않음.
+- 다음: chi-server SSH 접근 준비 → 검증 커밋 bundle/SSH 전달 → deploy.ps1 → Caddy 백업/validate/reload → 보호된 maintenance/trash.env 설정 및 CHI-HUB-Trash 등록/권한/실행 검증. GitHub push는 요청 전 금지.
+- 휴지통 키는 앱 공개 env와 분리. 서버 전용 파일 C:/Services/chi-hub-maintenance/trash.env에 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY만 설정, 실제 값 기록 금지. 상세 절차 deploy/windows/README.md.
+- Supabase security Advisor: 유출 비밀번호 보호 비활성화 경고 1건. 전체 사용자 테이블 10개 RLS 및 비공개 bucket 확인. 가입 제한/MFA/백업/서버 방화벽 현황 확인과 모바일·워치 확장 안내는 docs/SECURITY_AND_APPS.md. 네이티브 앱은 이번 범위에서 생성하지 않음.
+
+## 이전 운영 상태 (2026-09-16 확인 기록)
 
 인수인계 문서 커밋 9a5e25c까지 로컬/서버 소스 동기화 후 사용자 요청으로 GitHub main에 push했다. 후속 문서 정리도 함께 동기화한다. 아래 실행 빌드와 소스 HEAD 차이는 문서 전용 커밋 때문이며 앱 미배포 변경이 아니다. 정확한 HEAD는 git log로 확인한다.
 
@@ -193,6 +205,8 @@ API는 서버 세션 사용자를 확인하고 Supabase RLS로 사용자 범위�
 - 공인 IP 변경 대응과 로그/릴리스 보관 정책은 후속 운영 과제.
 
 ## 최근 핵심 이력
+
+- 2026-09-22: PC/모바일 표시 구조 분리, 메모/드라이브 UI 개편 및 저장 수정, 캘린더 날짜 팝업, 30일 휴지통 DB 적용. 앱·Caddy·자동 정리 worker 배포 대기.
 
 - 2026-09-16: CHI Toolbox 명칭 및 chitoolbox.com 전환, 새 공유 이미지, 서버 배포와 공개 HTTPS 검증 완료.
 - 2026-09-16: Windows 자가 호스팅 전환. Node standalone, 보안 의존성 업데이트, loopback/proxy 설정, health/smoke, 릴리스 배포/자동 시작/롤백 스크립트 추가. Sites 배포 중단 결정.

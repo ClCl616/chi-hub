@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function useApi<T>(url: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const generation = useRef(0);
   const refresh = useCallback(async () => {
+    const requestGeneration = ++generation.current;
     setLoading(true);
     setError('');
     let lastError = '데이터를 불러오지 못했습니다.';
@@ -16,21 +18,32 @@ export function useApi<T>(url: string) {
         const body = (await response.json().catch(() => ({}))) as {
           message?: string;
         };
+        if (generation.current !== requestGeneration) return;
         if (!response.ok) throw new Error(body.message ?? lastError);
         setData(body as T);
         setLoading(false);
         return;
       } catch (reason) {
+        if (generation.current !== requestGeneration) return;
         lastError = reason instanceof Error ? reason.message : lastError;
         if (attempt === 0)
           await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
+    if (generation.current !== requestGeneration) return;
     setError(lastError);
     setLoading(false);
   }, [url]);
   useEffect(() => {
-    queueMicrotask(() => void refresh());
+    queueMicrotask(() => {
+      setData(null);
+      void refresh();
+    });
+    return () => {
+      // This is a request counter, not a DOM ref; invalidate all pending responses.
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
+      generation.current++;
+    };
   }, [refresh]);
   useEffect(() => {
     // A dashboard keeps all tools mounted: reflect records from other panels

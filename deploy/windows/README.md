@@ -111,3 +111,28 @@ DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변
 이전 chi-hub.kro.kr은 공유 등록 도메인 kro.kr의 인증서 발급 한도로 HTTPS 연결을 완료하지 못했다. 사용자 결정으로 chitoolbox.com으로 전환한다. 루트 A 레코드 연결, Supabase Site URL/Redirect URLs 사용자 설정 완료. 서버 환경 파일의 사이트 URL 수정·재빌드와 Caddyfile 검증·반영 및 공개 HTTPS 확인 완료. 현재 상태는 CODEX_CONTEXT.md 참고.
 
 브랜드는 CHI Toolbox이며 서버 경로/작업 이름은 기존 chi-hub/CHI-HUB를 유지한다.
+
+## 2026-09-22 UI 개편과 휴지통 배포
+
+`20260922092822_drive_trash.sql`은 운영 Supabase에 적용 완료했다. 기존 사용자 파일을 이동·삭제하지 않았으며 기존 RLS를 유지한다. 이전 0001~0005는 DB에 존재하지만 Supabase migration history에 기록되어 있지 않으므로 **db push로 모두 재적용하지 않는다**.
+
+신규 앱 배포 전까지 기존 운영 앱의 삭제 버튼은 여전히 영구 삭제한다. UI 변경과 자동 삭제 작업이 적용된 것으로 안내하지 않는다.
+
+1. 검증된 커밋을 기존 bundle/SSH 절차로 전달하고 `deploy.ps1`로 앱을 배포한다.
+2. 저장소의 Caddyfile을 운영 경로로 복사하기 전 기존 설정을 백업하고 `caddy validate` 후 reload한다. 추가된 보안 헤더를 공개 HTTPS 응답에서 확인한다.
+3. `C:\Services\chi-hub-maintenance\trash.env`를 서버에만 만든다. 키 이름은 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`이며 실제 값은 관리자에게 안전한 경로로 입력받는다. 이 파일은 앱 `.env.local`과 다르며 release/Git에 복사하지 않는다.
+4. maintenance 폴더의 상속 ACL을 제거하고 관리자·배포 사용자·SYSTEM에 제어권, LOCAL SERVICE에 읽기 권한만 부여한다. LOCAL SERVICE에는 소스의 scripts 및 node_modules 읽기/실행 권한도 필요하다. 일반 사용자/Everyone의 키 읽기 권한이 없는지 확인한다.
+5. 관리자 PowerShell에서 `deploy/windows/install-trash-task.ps1` 실행. `CHI-HUB-Trash`는 서버 현지 시각 매일 04:00에 실행하며, 중단된 실행은 복구 후 실행하고 실패는 20분 간격으로 재시도한다.
+6. 최초 실행은 키/권한을 검증한 뒤 `Start-ScheduledTask -TaskName CHI-HUB-Trash`로 수행하고 `Get-ScheduledTaskInfo`의 결과 0을 확인한다. 실행은 실제 30일 만료 파일을 영구 삭제하므로 날짜를 앞당기거나 사용자 파일로 인위적인 만료 테스트를 하지 않는다.
+
+30일은 삭제 시각부터 계산한다. 기한이 지나면 복원이 차단되고 다음 일일 작업에서 바이트와 메타데이터를 삭제한다. 정리 작업이 중지돼 있으면 만료 파일은 영구 삭제 대기 상태로 남는다. UI/서명 URL만 숨기고 Storage 바이트를 남겨두는 방식이 아니다. Storage API 삭제 성공 후 DB 행을 지우며, 중간 실패는 15분 뒤 다시 claim할 수 있다.
+
+작업 등록/키 설정/앱 및 Caddy 배포는 현재 PC의 SSH 연결이 준비된 뒤 완료해야 한다. 이 PC에서는 `chi-server` 별칭이 아직 실제 호스트로 해석되지 않는다.
+
+## UI 회귀 검사
+
+`playwright`는 devDependency다. `npx playwright install chromium`으로 브라우저를 준비하거나 Windows의 Edge를 `TEST_BROWSER=msedge`로 선택한다.
+
+dummy 환경 변수로 로컬 dev 서버를 127.0.0.1:13002에서 실행한 뒤 `node scripts/test-workspaces.mjs`를 실행한다. API를 모두 가로채므로 운영 데이터를 변경하지 않는다. 캡처는 `work/qa`에 생성되며 커밋하지 않는다. `TEST_BASE_URL`은 localhost/127.0.0.1 주소만 허용한다.
+
+`node --test scripts/trash-worker.test.mjs`는 삭제 순서와 실패 처리를 mock으로 확인한다. `scripts/test-trash.sql`은 DB transaction 안에서 실행한 뒤 rollback하며 사용자 파일 대신 temporary table만 사용한다.

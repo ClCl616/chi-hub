@@ -1,0 +1,21 @@
+/* PC presentation: shared controllers remain mounted across viewport changes. */
+@media (min-width: 821px) {
+  .drive-workspace,
+  .notes-studio {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+  .calendar-board .calendar-day {
+    min-height: clamp(96px, 12dvh, 155px);
+    padding: 12px;
+  }
+  .calendar-board .calendar-day span {
+    font-size: 11px;
+  }
+  .notes-library {
+    min-height: 70dvh;
+  }
+  .document-canvas {
+    max-height: calc(100dvh - 295px);
+    overflow: auto;
+  }
+}

@@ -1,140 +1,400 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Download, File, FileArchive, FileImage, FolderOpen, Grid2X2, List, Trash2, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import {
+  Download,
+  File as FileIcon,
+  FolderOpen,
+  Grid2X2,
+  HardDrive,
+  List,
+  RotateCcw,
+  Search,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
+
 type StoredFile = {
   id: string;
   name: string;
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
+  deleted_at: string | null;
+  purge_started_at: string | null;
   url: string | null;
 };
-const sizeLabel = (bytes: number | null) => {
-  if (!bytes) return '0 KB';
-  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-};
+const sizeLabel = (bytes: number | null) =>
+  !bytes
+    ? '0 KB'
+    : bytes < 1048576
+      ? `${Math.ceil(bytes / 1024)} KB`
+      : `${(bytes / 1048576).toFixed(1)} MB`;
 export function FilesWorkspace() {
-  const records = useApi<{ files: StoredFile[] }>('/api/files');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [trash, setTrash] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const records = useApi<{ files: StoredFile[] }>(
+    `/api/files${trash ? '?trash=true' : ''}`,
+  );
+  const refreshFiles = records.refresh;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+      void refreshFiles();
+    }, 240000);
+    return () => window.clearInterval(timer);
+  }, [refreshFiles]);
+  const input = useRef<HTMLInputElement>(null);
+  const uploading = useRef(false);
+  const dragDepth = useRef(0);
+  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<string[]>([]);
   const [message, setMessage] = useState('');
-  const [uploads, setUploads] = useState<Array<{name:string;status:string}>>([]);
-  const [view, setView] = useState<'list'|'grid'>('list');
+  const [uploads, setUploads] = useState<
+    Array<{ name: string; status: string }>
+  >([]);
+  const [view, setView] = useState<'list' | 'grid'>('grid');
+  const [query, setQuery] = useState('');
+  const [kind, setKind] = useState('all');
+  const [sort, setSort] = useState('newest');
   async function upload(files: File[]) {
+    if (uploading.current || !files.length) return;
+    uploading.current = true;
     setBusy(true);
-    setUploads(files.map(file=>({name:file.name,status:'업로드 중'})));
-    for (const file of files) { const form = new FormData(); form.append('file', file); try { await apiRequest('/api/files',{method:'POST',body:form}); setUploads(items=>items.map(item=>item.name===file.name?{...item,status:'완료'}:item)); } catch { setUploads(items=>items.map(item=>item.name===file.name?{...item,status:'실패'}:item)); } }
-    await records.refresh(); setBusy(false); if(inputRef.current)inputRef.current.value='';
+    setMessage('');
+    setUploads(files.map((file) => ({ name: file.name, status: '대기' })));
+    for (const [index, file] of files.entries()) {
+      const status = (value: string) =>
+        setUploads((items) =>
+          items.map((item, i) =>
+            i === index ? { ...item, status: value } : item,
+          ),
+        );
+      try {
+        if (file.size > 500 * 1024 * 1024) throw new Error('500MB 초과');
+        status('업로드 중');
+        const form = new FormData();
+        form.append('file', file);
+        await apiRequest('/api/files', { method: 'POST', body: form });
+        status('완료');
+      } catch (error) {
+        status(error instanceof Error ? error.message : '실패');
+      }
+    }
+    await records.refresh();
+    uploading.current = false;
+    setBusy(false);
+    if (input.current) input.current.value = '';
   }
-  async function remove(id: string) {
-    if (!window.confirm('이 파일을 영구 삭제할까요?')) return;
+  async function move(item: StoredFile) {
+    if (pending.includes(item.id)) return;
+    setPending((items) => [...items, item.id]);
+    setMessage('');
+    // Hide immediately, then restore on failure. Never permanently delete here.
+    records.setData((data) => ({
+      files: (data?.files ?? []).filter((file) => file.id !== item.id),
+    }));
     try {
-      await apiRequest(`/api/files?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      await records.refresh();
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : '삭제하지 못했습니다.',
+      await apiRequest(
+        `/api/files${trash ? '' : `?id=${encodeURIComponent(item.id)}`}`,
+        trash
+          ? {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ id: item.id }),
+            }
+          : { method: 'DELETE' },
       );
+      setMessage(
+        trash
+          ? '파일을 복원했습니다.'
+          : '휴지통으로 이동했습니다. 30일 동안 복원할 수 있습니다.',
+      );
+    } catch (error) {
+      records.setData((data) => ({
+        files: [
+          ...(data?.files ?? []).filter((file) => file.id !== item.id),
+          item,
+        ],
+      }));
+      setMessage(
+        error instanceof Error ? error.message : '처리하지 못했습니다.',
+      );
+    } finally {
+      setPending((items) => items.filter((id) => id !== item.id));
     }
   }
+  const files = (records.data?.files ?? [])
+    .filter(
+      (file) =>
+        !pending.includes(file.id) &&
+        file.name.toLowerCase().includes(query.toLowerCase()) &&
+        (kind === 'all' ||
+          (kind === 'image'
+            ? file.mime_type?.startsWith('image/')
+            : kind === 'video'
+              ? file.mime_type?.startsWith('video/')
+              : !file.mime_type?.startsWith('image/') &&
+                !file.mime_type?.startsWith('video/'))),
+    )
+    .sort((a, b) =>
+      sort === 'name'
+        ? a.name.localeCompare(b.name, 'ko')
+        : sort === 'size'
+          ? (b.size_bytes ?? 0) - (a.size_bytes ?? 0)
+          : b.created_at.localeCompare(a.created_at),
+    );
   return (
-    <div className="files-layout">
-      <section className="upload-card">
-        <FileArchive size={26} />
-        <div>
-        <h2>내 드라이브에 업로드</h2>
+    <div
+      className={`drive-workspace ${dragging ? 'is-dragging' : ''}`}
+      onDragEnter={(event) => {
+        if (!event.dataTransfer.types.includes('Files')) return;
+        event.preventDefault();
+        dragDepth.current++;
+        setDragging(true);
+      }}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('Files')) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = trash || busy ? 'none' : 'copy';
+        }
+      }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (!dragDepth.current) setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        if (trash) {
+          setMessage('내 드라이브에서 파일을 업로드해주세요.');
+          return;
+        }
+        void upload(Array.from(event.dataTransfer.files));
+      }}
+    >
+      <aside className="drive-sidebar">
+        <button
+          className="drive-upload"
+          disabled={busy || trash}
+          onClick={() => input.current?.click()}
+        >
+          <Upload size={20} />
+          {busy ? '업로드 중…' : '파일 업로드'}
+        </button>
+        <nav aria-label="드라이브 위치">
+          <button
+            disabled={pending.length > 0}
+            className={!trash ? 'active' : ''}
+            onClick={() => setTrash(false)}
+          >
+            <HardDrive size={19} />내 드라이브
+          </button>
+          <button
+            disabled={pending.length > 0 || busy}
+            className={trash ? 'active' : ''}
+            onClick={() => setTrash(true)}
+          >
+            <Trash2 size={19} />
+            휴지통
+          </button>
+        </nav>
         <p>
-          문서, 이미지, 압축 파일을 보관하세요. 파일당 최대 500MB까지 지원합니다.
+          나만의 비공개 저장 공간
+          <br />
+          파일당 최대 500MB
         </p>
+      </aside>
+      <section className="drive-content">
+        <header className="library-toolbar">
+          <div>
+            <p className="card-label">MY DRIVE</p>
+            <h2>{trash ? '휴지통' : '내 드라이브'}</h2>
+          </div>
+          <div className="file-view-actions">
+            <button
+              aria-label="파일 목록 보기"
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+            >
+              <List size={18} />
+            </button>
+            <button
+              aria-label="파일 격자 보기"
+              aria-pressed={view === 'grid'}
+              onClick={() => setView('grid')}
+            >
+              <Grid2X2 size={18} />
+            </button>
+          </div>
+        </header>
+        <div className="library-filters">
+          <label className="search-field">
+            <Search size={18} />
+            <input
+              aria-label="드라이브 검색"
+              placeholder="파일 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <select
+            aria-label="파일 유형"
+            value={kind}
+            onChange={(event) => setKind(event.target.value)}
+          >
+            <option value="all">모든 유형</option>
+            <option value="image">이미지</option>
+            <option value="video">동영상</option>
+            <option value="document">문서 및 기타</option>
+          </select>
+          <select
+            aria-label="파일 정렬"
+            value={sort}
+            onChange={(event) => setSort(event.target.value)}
+          >
+            <option value="newest">최근 추가순</option>
+            <option value="name">이름순</option>
+            <option value="size">크기순</option>
+          </select>
         </div>
+        <p className="drive-hint">
+          {trash
+            ? '휴지통으로 이동한 파일은 30일 후 자동으로 영구 삭제됩니다.'
+            : '파일을 이곳에 끌어다 놓으면 바로 업로드됩니다.'}
+        </p>
         <input
-          ref={inputRef}
+          ref={input}
+          type="file"
           hidden
           multiple
-          onChange={(event) => {
-            const files = Array.from(event.target.files ?? []);
-            if (files.length) void upload(files);
-          }}
-          type="file"
+          onChange={(event) =>
+            void upload(Array.from(event.target.files ?? []))
+          }
         />
-        <button
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          type="button"
-        >
-          <Upload size={17} /> {busy ? '업로드 중…' : '파일 업로드'}
-        </button>
         {message && (
-          <output
-            className={
-              message.includes('못') || message.includes('설정') ? 'error' : ''
-            }
-          >
+          <output className="drive-message" aria-live="polite">
             {message}
           </output>
         )}
-        {uploads.map(item=><output className={item.status==='실패'?'error':''} key={item.name}>{item.name} · {item.status}</output>)}
-      </section>
-      <section className="workspace-card file-list-card">
-        <div className="section-title">
-          <div>
-            <p className="card-label"><FolderOpen size={15} /> MY DRIVE</p>
-            <h2>내 드라이브</h2>
+        {uploads.length > 0 && (
+          <div className="upload-progress" aria-live="polite">
+            {uploads.map((item, index) => (
+              <p key={index}>
+                {item.name}
+                <span>{item.status}</span>
+              </p>
+            ))}
           </div>
-          <div className="file-view-actions"><span>{records.data?.files.length ?? 0}개</span><button className={view==='list'?'active':''} onClick={()=>setView('list')} type="button" aria-label="목록 보기"><List size={15}/></button><button className={view==='grid'?'active':''} onClick={()=>setView('grid')} type="button" aria-label="격자 보기"><Grid2X2 size={15}/></button></div>
-        </div>
+        )}
         <DataNotice
           loading={records.loading}
           error={records.error}
           onRetry={records.refresh}
         />
-        <div className={view==='grid'?'file-grid':'file-list'}>
-          {(records.data?.files ?? []).map((item) => (
-            <article className="file-row" key={item.id}>
-              {item.mime_type?.startsWith('image/') && item.url ? <img className="file-preview" src={item.url} alt=""/> : <div className="file-icon">{item.mime_type?.startsWith('image/')?<FileImage size={19}/>:<File size={19}/>}</div>}
-              <div>
-                <strong>{item.name}</strong>
-                <span>
-                  {sizeLabel(item.size_bytes)} ·{' '}
-                  {new Intl.DateTimeFormat('ko-KR', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  }).format(new Date(item.created_at))}
-                </span>
-              </div>
-              <div>
-                {item.url && (
-                  <a
-                    aria-label={`${item.name} 다운로드`}
-                    href={item.url}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    <Download size={16} />
-                  </a>
-                )}
-                <button
-                  aria-label={`${item.name} 삭제`}
-                  onClick={() => remove(item.id)}
-                  type="button"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </article>
-          ))}
+        <div className={`drive-items ${view}`}>
+          {files.map((item) => {
+            const expires = item.deleted_at
+              ? new Date(new Date(item.deleted_at).getTime() + 30 * 86400000)
+              : null;
+            const expired = Boolean(
+              item.purge_started_at || (expires && expires.getTime() <= now),
+            );
+            return (
+              <article className="drive-item" key={item.id}>
+                <div className="drive-thumbnail">
+                  {item.mime_type?.startsWith('image/') && item.url ? (
+                    <Image
+                      src={item.url}
+                      alt=""
+                      width={240}
+                      height={160}
+                      unoptimized
+                    />
+                  ) : (
+                    <FileIcon size={view === 'grid' ? 48 : 23} />
+                  )}
+                </div>
+                <div className="drive-file-info">
+                  <strong title={item.name}>{item.name}</strong>
+                  <small>
+                    {sizeLabel(item.size_bytes)} ·{' '}
+                    {expires
+                      ? expired
+                        ? '영구 삭제 대기'
+                        : `${expires.toLocaleDateString('ko-KR')} 삭제 예정`
+                      : new Date(item.created_at).toLocaleDateString('ko-KR')}
+                  </small>
+                </div>
+                <div className="drive-item-actions">
+                  {trash ? (
+                    <button
+                      aria-label={`${item.name} 복원`}
+                      disabled={expired}
+                      onClick={() => void move(item)}
+                    >
+                      <RotateCcw size={17} />
+                      <span>복원</span>
+                    </button>
+                  ) : (
+                    <>
+                      {item.url && (
+                        <a
+                          aria-label={`${item.name} 다운로드`}
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <Download size={17} />
+                        </a>
+                      )}
+                      <button
+                        aria-label={`${item.name} 휴지통으로 이동`}
+                        onClick={() => void move(item)}
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
-        {!records.loading && !records.error && !records.data?.files.length && (
-          <DataNotice empty="아직 보관한 파일이 없습니다." />
+        {!records.loading && !records.error && !files.length && (
+          <div className="drive-empty">
+            <FolderOpen size={45} />
+            <h3>
+              {query
+                ? '검색 결과가 없습니다.'
+                : trash
+                  ? '휴지통이 비어 있습니다.'
+                  : '파일을 보관해보세요.'}
+            </h3>
+            {!trash && !query && (
+              <p>파일을 끌어다 놓거나 파일 업로드를 선택하세요.</p>
+            )}
+          </div>
         )}
       </section>
+      {dragging && (
+        <div className="drop-overlay">
+          <Upload size={40} />
+          <strong>
+            {trash
+              ? '내 드라이브에서 업로드해주세요'
+              : busy
+                ? '현재 업로드가 끝난 뒤 추가해주세요'
+                : '놓아서 업로드'}
+          </strong>
+        </div>
+      )}
     </div>
   );
 }

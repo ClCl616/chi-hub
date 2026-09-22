@@ -9,6 +9,7 @@ import {
 import { useMemo, useState } from 'react';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { DataNotice } from '@/components/feature-layout';
+import { WorkspaceDialog } from '@/components/workspace-dialog';
 type RecordItem = {
   id: string;
   date: string;
@@ -30,6 +31,9 @@ export function CalendarWorkspace() {
   const [selected, setSelected] = useState(today());
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const days = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1),
       start = new Date(first);
@@ -42,24 +46,42 @@ export function CalendarWorkspace() {
   }, [cursor]);
   const records = data.data?.records ?? [];
   const selectedRecords = records.filter((item) => item.date === selected);
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title) return;
-    await apiRequest('/api/calendar-events', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title, event_date: selected, notes }),
-    });
-    setTitle('');
-    setNotes('');
-    await data.refresh();
+  const add = async () => {
+    if (!title.trim() || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await apiRequest('/api/calendar-events', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title, event_date: selected, notes }),
+      });
+      setTitle('');
+      setNotes('');
+      await data.refresh();
+      setOpen(false);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : '저장하지 못했습니다.',
+      );
+    } finally {
+      setBusy(false);
+    }
   };
   const remove = async (id: string) => {
-    if (window.confirm('이 일정을 삭제할까요?')) {
+    setBusy(true);
+    setError('');
+    try {
       await apiRequest(`/api/calendar-events?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
       await data.refresh();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : '삭제하지 못했습니다.',
+      );
+    } finally {
+      setBusy(false);
     }
   };
   const shift = (amount: number) =>
@@ -69,6 +91,11 @@ export function CalendarWorkspace() {
   return (
     <div className="calendar-layout">
       <section className="workspace-card calendar-board">
+        <DataNotice
+          loading={data.loading}
+          error={data.error}
+          onRetry={data.refresh}
+        />
         <div className="calendar-title">
           <button onClick={() => shift(-1)} aria-label="이전 달">
             <ChevronLeft size={18} />
@@ -98,21 +125,34 @@ export function CalendarWorkspace() {
             return (
               <button
                 className={`calendar-day ${selected === key ? 'selected' : ''} ${outside ? 'outside' : ''}`}
-                onClick={() => setSelected(key)}
+                onClick={() => {
+                  setSelected(key);
+                  setTitle('');
+                  setNotes('');
+                  setError('');
+                  setOpen(true);
+                }}
+                aria-label={`${key}, ${items.length}개 기록, 일정 추가`}
                 key={key}
               >
                 <time>{day.getDate()}</time>
                 {items.slice(0, 2).map((item) => (
-                  <span key={`${item.type}-${item.id}`}>{item.type}</span>
+                  <span key={`${item.type}-${item.id}`}>{item.title}</span>
                 ))}
+                {items.length > 2 && <small>+{items.length - 2}</small>}
               </button>
             );
           })}
         </div>
       </section>
-      <aside className="workspace-card calendar-detail">
-        <p className="card-label">SELECTED DAY</p>
-        <h2>{selected}</h2>
+      <WorkspaceDialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!busy) setOpen(value);
+        }}
+        title={selected}
+        description="이 날짜의 기록을 확인하고 새 일정을 추가하세요."
+      >
         <DataNotice
           loading={data.loading}
           error={data.error}
@@ -130,6 +170,7 @@ export function CalendarWorkspace() {
                 <button
                   className="icon-button"
                   onClick={() => void remove(item.id)}
+                  disabled={busy}
                   aria-label="일정 삭제"
                 >
                   <Trash2 size={15} />
@@ -138,23 +179,35 @@ export function CalendarWorkspace() {
             </article>
           ))}
         </div>
-        <form className="stack-form" onSubmit={add}>
+        <form
+          className="stack-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void add();
+          }}
+        >
           <input
+            aria-label="일정 제목"
+            required
+            maxLength={100}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="일정 추가"
           />
           <input
+            aria-label="일정 메모"
+            maxLength={500}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="메모 (선택)"
           />
-          <button className="submit-button">
+          <button className="submit-button" disabled={busy}>
             <Plus size={16} />
-            일정 저장
+            {busy ? '처리 중…' : '일정 저장'}
           </button>
         </form>
-      </aside>
+        {error && <p role="alert">{error}</p>}
+      </WorkspaceDialog>
     </div>
   );
 }

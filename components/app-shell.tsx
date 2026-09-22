@@ -1,30 +1,22 @@
 'use client';
-import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { WorkspaceStatus } from '@/components/workspace-status';
 import {
   BedDouble,
   CalendarDays,
   Dumbbell,
   HardDrive,
-  LogIn,
-  LogOut,
-  Menu,
   MoonStar,
   NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
   TimerReset,
   UtensilsCrossed,
 } from 'lucide-react';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DesktopNavigation } from '@/components/layout/desktop-navigation';
+import {
+  MobileHeader,
+  MobileBottomNavigation,
+} from '@/components/layout/mobile-navigation';
 
 const navigation = [
   { id: 'focus', label: '타이머', icon: TimerReset },
@@ -134,6 +126,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     window.location.href = '/login';
   }
+  const navigationProps = {
+    navigation,
+    authState,
+    logout,
+    activeView,
+    selectView,
+    toggleSidebar,
+  };
   const title = navigation.find((item) => item.id === activeView)?.label;
   return (
     <TabsPrimitive.Root
@@ -148,105 +148,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <a className="skip-content" href="#workspace">
         본문으로 건너뛰기
       </a>
-      <aside className="sidebar">
-        <div className="sidebar-brand-row">
-          <div className="brand">
-            <span className="brand-mark">C</span>
-            <span>
-              CHI TOOLBOX<small>나의 일상을 위한 도구 상자</small>
-            </span>
-          </div>
-          <button
-            aria-label="사이드바 접기"
-            className="sidebar-toggle sidebar-toggle-inset"
-            onClick={toggleSidebar}
-            type="button"
-          >
-            <PanelLeftClose size={19} />
-          </button>
-        </div>
-        <div className="side-nav">
-          <TabsList className="workspace-tab-list" aria-label="작업 구분">
-            {navigation.map(({ id, label, icon: Icon }, index) => (
-              <Fragment key={id}>
-                {[0, 4, 6].includes(index) && (
-                  <div className="nav-group-label">
-                    {index === 0
-                      ? '계획 · 집중'
-                      : index === 4
-                        ? '생활 관리'
-                        : '자료 · 정보'}
-                  </div>
-                )}
-                <TabsTrigger className="workspace-tab" value={id}>
-                  <Icon size={19} />
-                  <span>{label}</span>
-                </TabsTrigger>
-              </Fragment>
-            ))}
-          </TabsList>
-        </div>
-        <div className="sidebar-footer">
-          {authState === 'ready' ? (
-            <button onClick={logout} type="button">
-              <LogOut size={18} />
-              로그아웃
-            </button>
-          ) : (
-            <a href="/login">
-              <LogIn size={18} />
-              로그인
-            </a>
-          )}
-        </div>
-      </aside>
-      <button
-        aria-label="사이드바 펼치기"
-        className="sidebar-toggle sidebar-toggle-floating"
-        onClick={toggleSidebar}
-        type="button"
-      >
-        <PanelLeftOpen size={19} />
-      </button>
-      <header className="mobile-header">
-        <div className="mobile-brand">
-          <span className="brand-mark">C</span>CHI TOOLBOX
-        </div>
-        <Sheet>
-          <SheetTrigger
-            className="mobile-menu-trigger"
-            aria-label="전체 메뉴 열기"
-          >
-            <Menu size={22} />
-          </SheetTrigger>
-          <SheetContent className="mobile-menu" side="right">
-            <SheetTitle className="mobile-menu-title">작업 선택</SheetTitle>
-            <div className="mobile-menu-nav">
-              {navigation.map(({ id, label, icon: Icon }) => (
-                <SheetClose
-                  key={id}
-                  className={activeView === id ? 'active' : ''}
-                  onClick={() => selectView(id)}
-                  aria-pressed={activeView === id}
-                >
-                  <Icon size={19} />
-                  <span>{label}</span>
-                </SheetClose>
-              ))}
-            </div>
-            <div className="mobile-menu-footer">
-              {authState === 'ready' ? (
-                <button onClick={logout} type="button">
-                  <LogOut size={18} />
-                  로그아웃
-                </button>
-              ) : (
-                <a href="/login">로그인</a>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-      </header>
+      <DesktopNavigation {...navigationProps} />
+      <MobileHeader {...navigationProps} />
       <header className="workspace-topbar">
         <div className="workspace-identity">
           <span className="workspace-avatar">C</span>
@@ -289,26 +192,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </>
         )}
       </main>
-      <nav className="bottom-nav" aria-label="모바일 작업 선택">
-        {navigation
-          .filter((item) =>
-            ['focus', 'morning', 'calendar', 'notes', 'files'].includes(
-              item.id,
-            ),
-          )
-          .map(({ id, label, icon: Icon }) => (
-            <button
-              type="button"
-              key={id}
-              className={activeView === id ? 'active' : ''}
-              aria-pressed={activeView === id}
-              onClick={() => selectView(id)}
-            >
-              <Icon size={20} />
-              <span>{label}</span>
-            </button>
-          ))}
-      </nav>
+      <MobileBottomNavigation {...navigationProps} />
     </TabsPrimitive.Root>
   );
 }

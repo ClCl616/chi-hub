@@ -11,7 +11,9 @@ export async function GET() {
       );
     const { data, error } = await supabase
       .from('notes')
-      .select('id,title,content,pinned,content_type,category,drawing_data,created_at,updated_at')
+      .select(
+        'id,title,content,pinned,content_type,category,drawing_data,created_at,updated_at',
+      )
       .order('pinned', { ascending: false })
       .order('updated_at', { ascending: false })
       .limit(200);
@@ -37,6 +39,10 @@ export async function POST(request: Request) {
       .trim()
       .slice(0, 120);
     const content = String(body.content ?? '').slice(0, 50_000);
+    const id =
+      typeof body.id === 'string' && /^[0-9a-f-]{36}$/i.test(body.id)
+        ? body.id
+        : crypto.randomUUID();
     if (!title && !content.trim())
       return NextResponse.json(
         { message: '메모 내용을 입력해주세요.' },
@@ -44,11 +50,23 @@ export async function POST(request: Request) {
       );
     const { data, error } = await supabase
       .from('notes')
-      .insert({
+      .upsert({
+        id,
         user_id: user.id,
         title,
         content,
-        pinned: Boolean(body.pinned),category: typeof body.category==='string'?body.category.slice(0,40):'개인',content_type: typeof body.contentType==='string'?body.contentType:'markdown',drawing_data: typeof body.contentType==='string'&&body.contentType==='drawing'?content:null,
+        updated_at: new Date().toISOString(),
+        pinned: Boolean(body.pinned),
+        category:
+          typeof body.category === 'string'
+            ? body.category.slice(0, 40)
+            : '개인',
+        content_type:
+          typeof body.contentType === 'string' ? body.contentType : 'markdown',
+        drawing_data:
+          typeof body.contentType === 'string' && body.contentType === 'drawing'
+            ? content
+            : null,
       })
       .select()
       .single();
@@ -80,7 +98,9 @@ export async function PATCH(request: Request) {
       title?: string;
       content?: string;
       pinned?: boolean;
-      category?: string; content_type?: string; drawing_data?: string|null;
+      category?: string;
+      content_type?: string;
+      drawing_data?: string | null;
       updated_at: string;
     } = { updated_at: new Date().toISOString() };
     if (typeof body.title === 'string')
@@ -88,7 +108,16 @@ export async function PATCH(request: Request) {
     if (typeof body.content === 'string')
       updates.content = body.content.slice(0, 50_000);
     if (typeof body.pinned === 'boolean') updates.pinned = body.pinned;
-    if(typeof body.category==='string')updates.category=body.category.slice(0,40);if(typeof body.contentType==='string'&&['markdown','sticky','drawing'].includes(body.contentType)){updates.content_type=body.contentType;updates.drawing_data=body.contentType==='drawing'?String(body.content??''):null;}
+    if (typeof body.category === 'string')
+      updates.category = body.category.slice(0, 40);
+    if (
+      typeof body.contentType === 'string' &&
+      ['markdown', 'sticky', 'drawing'].includes(body.contentType)
+    ) {
+      updates.content_type = body.contentType;
+      updates.drawing_data =
+        body.contentType === 'drawing' ? String(body.content ?? '') : null;
+    }
     const { data, error } = await supabase
       .from('notes')
       .update(updates)
