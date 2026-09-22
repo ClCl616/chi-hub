@@ -6,9 +6,9 @@
 
 - 운영 public 사용자 테이블 10개 모두 RLS가 켜져 있고, 사용자 ID 소유권 조건이 있다. Storage `private-files`는 비공개이고 경로의 사용자 ID를 검사한다.
 - 앱 API는 `getUser()`로 사용자 확인 후 동작한다. 로그인하지 않은 파일 API는 로컬 production smoke에서 401을 반환했다.
-- 앱 서버는 loopback, Caddy는 HTTPS 진입점이다. 현재 PC에서 서버 방화벽/서비스의 실시간 설정을 재검증한 것은 아니다.
+- 앱 서버는 loopback, Caddy는 HTTPS 진입점이다. 이번 배포에서 앱/Caddy 실행, 앱 loopback 수신과 공개 HTTPS를 확인했다.
 - Supabase 보안 Advisor 경고는 **유출 비밀번호 차단 비활성화 1건**이다. 이 기능은 현재 공식 문서상 Pro 이상에서 제공된다. 경고가 없다는 것이 전체 보안 감사 통과를 의미하지는 않는다.
-- 이번 코드에 HSTS, nosniff, iframe 차단, Referrer-Policy, 불필요한 장치 권한 차단을 Caddy 설정으로 추가했다. 운영 Caddy에 반영·검증해야 실제 적용된다.
+- 이번 코드에 HSTS, nosniff, iframe 차단, Referrer-Policy, 불필요한 장치 권한 차단을 Caddy 설정으로 추가했다. 운영 Caddy validate/reload와 공개 HTTPS 응답 검증을 완료했다.
 - Markdown은 `react-markdown`과 GFM을 사용하며 raw HTML은 실행하지 않는다. 파일 서명 URL은 5분이며 목록은 4분마다 갱신한다. 이미 발급된 링크는 휴지통 이동 직후에도 만료 시점까지 유효할 수 있다.
 
 ## 개인용 서비스의 우선순위
