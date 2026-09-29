@@ -36,16 +36,6 @@ kbd {
   justify-content: space-between;
   gap: 12px;
 }
-.workspace-shortcuts-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 8px 11px;
-  background: var(--surface);
-  font-size: 12px;
-}
 kbd {
   border: 1px solid #d8dbd0;
   border-bottom-width: 2px;
@@ -423,12 +413,6 @@ kbd {
   .meal-period .meal-card-grid {
     grid-template-columns: 1fr;
   }
-  .workspace-shortcuts-button kbd {
-    display: none;
-  }
-  .workspace-shortcuts-button {
-    flex-shrink: 0;
-  }
   .meal-period {
     padding: 14px;
   }
@@ -456,5 +440,131 @@ kbd {
   button[aria-pressed='true'],
   [role='tab'][aria-selected='true'] {
     outline: 2px solid Highlight;
+  }
+}
+
+/* Note actions share the same commands for right-click and touch. */
+.note-card {
+  position: relative;
+  min-width: 0;
+}
+.note-card .note-tile {
+  width: 100%;
+}
+.note-gallery.grid .note-card .note-paper {
+  padding-top: 42px;
+}
+.note-more {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.note-more:hover,
+.note-more[data-popup-open] {
+  background: #eef3df;
+}
+.note-gallery.list .note-card .note-tile {
+  padding-right: 46px;
+}
+.note-gallery.list .note-more {
+  top: 24px;
+}
+.note-actions-menu {
+  min-width: 160px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  box-shadow: 0 8px 24px #17191624;
+}
+.note-actions-menu [role='menuitem'] {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+.note-actions-menu [role='menuitem']:is(:hover, [data-highlighted]) {
+  background: #eef3df;
+}
+.note-actions-menu [data-variant='destructive'] {
+  color: #b64032;
+}
+.note-card[data-open] .note-paper {
+  border-color: #69831c;
+}
+.settings-workspace {
+  max-width: 900px;
+  margin: 24px auto 0;
+}
+.settings-intro {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--muted-ink);
+}
+.settings-card {
+  padding: 26px;
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.settings-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  margin: 0 0 20px;
+}
+.mouse-guide {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  font-size: 13px;
+}
+.mouse-guide dt {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.mouse-guide dd {
+  margin: 0;
+  color: var(--muted-ink);
+  line-height: 1.8;
+}
+.settings-card .shortcut-guide {
+  font-size: 13px;
+  gap: 0;
+}
+.settings-card .shortcut-guide > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.settings-footnote {
+  font-size: 12px;
+  color: var(--muted-ink);
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+@media (max-width: 820px) {
+  .note-more {
+    width: 40px;
+    height: 40px;
+  }
+  .note-actions-menu [role='menuitem'] {
+    min-height: 44px;
+  }
+  .note-gallery.grid .note-card .note-paper {
+    padding-top: 48px;
+  }
+  .settings-card {
+    padding: 18px;
+  }
+  .settings-card .shortcut-guide > div {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 }

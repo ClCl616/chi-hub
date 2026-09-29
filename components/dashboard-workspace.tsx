@@ -8,6 +8,7 @@ import { SleepWorkspace } from '@/components/sleep-workspace';
 import { WorkoutWorkspace } from '@/components/workout-workspace';
 import { FilesWorkspace } from '@/components/files-workspace';
 import { MealsWorkspace } from '@/components/meals-workspace';
+import { SettingsWorkspace } from '@/components/settings-workspace';
 import { StudyWorkspace } from '@/components/study-workspace';
 
 export function DashboardWorkspace() {
@@ -51,6 +52,13 @@ export function DashboardWorkspace() {
       </TabsContent>
       <TabsContent className="tab-view view-meals" value="meals" keepMounted>
         <MealsWorkspace />
+      </TabsContent>
+      <TabsContent
+        className="tab-view view-settings"
+        value="settings"
+        keepMounted
+      >
+        <SettingsWorkspace />
       </TabsContent>
     </>
   );

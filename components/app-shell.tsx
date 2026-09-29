@@ -12,6 +12,7 @@ import {
   TimerReset,
   UtensilsCrossed,
   GraduationCap,
+  Settings,
 } from 'lucide-react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 import { DesktopNavigation } from '@/components/layout/desktop-navigation';
@@ -30,6 +31,7 @@ const navigation = [
   { id: 'workouts', label: '운동', icon: Dumbbell },
   { id: 'files', label: '드라이브', icon: HardDrive },
   { id: 'meals', label: '학식', icon: UtensilsCrossed },
+  { id: 'settings', label: '설정', icon: Settings },
 ];
 const viewChanged = 'chi-hub-view-changed';
 function subscribeToView(onChange: () => void) {
@@ -189,11 +191,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="tab-workspace">
               <header className="tab-heading">
                 <h1>{title}</h1>
-                <WorkspaceShortcuts
-                  navigation={navigation}
-                  selectView={selectView}
-                />
               </header>
+              <WorkspaceShortcuts
+                navigation={navigation}
+                selectView={selectView}
+              />
               {children}
             </div>
           </>

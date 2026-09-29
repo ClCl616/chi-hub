@@ -19,6 +19,7 @@ import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { type Note, useNoteEditor } from '@/hooks/use-note-editor';
+import { NoteCard } from '@/components/note-card';
 import { DataNotice } from '@/components/feature-layout';
 const RichNoteEditor = lazy(() =>
   import('@/components/rich-note-editor').then((module) => ({
@@ -50,6 +51,7 @@ export function NotesWorkspace() {
   const [raw, setRaw] = useState(false);
   const [preview, setPreview] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const mutationPending = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [trashedNote, setTrashedNote] = useState<Note | null>(null);
@@ -100,19 +102,29 @@ export function NotesWorkspace() {
       setError('');
     }
   }
-  async function remove() {
+  async function remove(id = draft.id) {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
     setDeleting(true);
+    setNotice('');
     setError('');
     try {
-      if (!(await save())) return;
-      await apiRequest(`/api/notes?id=${encodeURIComponent(draft.id)}`, {
+      if (id === draft.id && !(await save())) {
+        setError(
+          '메모를 저장하지 못했습니다. 저장 상태를 확인하고 다시 시도해주세요.',
+        );
+        return;
+      }
+      await apiRequest(`/api/notes?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
       notes.setData((data) => ({
-        notes: (data?.notes ?? []).filter((note) => note.id !== draft.id),
+        notes: (data?.notes ?? []).filter((note) => note.id !== id),
       }));
-      editor.reset();
-      setEditing(false);
+      if (id === draft.id) {
+        editor.reset();
+        setEditing(false);
+      }
       setDeleteOpen(false);
       setNotice('휴지통으로 이동했습니다. 30일 동안 복원할 수 있습니다.');
       void trashNotes.refresh();
@@ -121,12 +133,15 @@ export function NotesWorkspace() {
         reason instanceof Error ? reason.message : '삭제하지 못했습니다.',
       );
     } finally {
+      mutationPending.current = false;
       setDeleting(false);
     }
   }
   async function restore(note: Note) {
-    if (deleting) return;
+    if (mutationPending.current) return;
+    mutationPending.current = true;
     setDeleting(true);
+    setNotice('');
     setError('');
     try {
       const result = await apiRequest<{ note: Note }>('/api/notes', {
@@ -150,6 +165,7 @@ export function NotesWorkspace() {
         reason instanceof Error ? reason.message : '복원하지 못했습니다.',
       );
     } finally {
+      mutationPending.current = false;
       setDeleting(false);
     }
   }
@@ -169,6 +185,7 @@ export function NotesWorkspace() {
                   setCategory(item);
                   setQuery('');
                   setNotice('');
+                  setError('');
                   if (item === '휴지통') void trashNotes.refresh();
                 }}
               >
@@ -206,6 +223,7 @@ export function NotesWorkspace() {
                 <button
                   className="submit-button"
                   data-workspace-new
+                  disabled={deleting}
                   onClick={() => void open()}
                 >
                   <Plus size={17} />
@@ -251,6 +269,7 @@ export function NotesWorkspace() {
                 {notice}
               </output>
             )}
+            {error && !trashedNote && <p role="alert">{error}</p>}
             <DataNotice
               loading={records.loading}
               error={records.error}
@@ -258,43 +277,24 @@ export function NotesWorkspace() {
             />
             <div className={`note-gallery ${view}`}>
               {filtered.map((note) => (
-                <button
-                  className="note-tile"
+                <NoteCard
                   key={note.id}
-                  onClick={() => {
+                  note={note}
+                  trash={trash}
+                  busy={deleting}
+                  expired={
+                    !!note.deleted_at &&
+                    Date.parse(note.deleted_at) + 30 * 86400000 <= now
+                  }
+                  onOpen={() => {
                     if (trash) {
                       setTrashedNote(note);
                       setError('');
                     } else void open(note);
                   }}
-                >
-                  <div className={`note-paper ${note.content_type}`}>
-                    {note.content_type === 'drawing' ? (
-                      <Image
-                        src={note.content}
-                        alt="필기 미리보기"
-                        width={180}
-                        height={225}
-                        unoptimized
-                      />
-                    ) : (
-                      <>
-                        <strong>{note.title || '제목 없는 메모'}</strong>
-                        <p>{note.content.slice(0, 240)}</p>
-                      </>
-                    )}
-                  </div>
-                  <strong>
-                    {note.pinned && <Pin size={13} />}{' '}
-                    {note.title || '제목 없는 메모'}
-                  </strong>
-                  <small>
-                    {trash ? '삭제일' : note.category} ·{' '}
-                    {new Date(
-                      note.deleted_at || note.updated_at,
-                    ).toLocaleDateString('ko-KR')}
-                  </small>
-                </button>
+                  onRemove={() => void remove(note.id)}
+                  onRestore={() => void restore(note)}
+                />
               ))}
             </div>
             {!records.loading && !records.error && !filtered.length && (
@@ -395,7 +395,6 @@ export function NotesWorkspace() {
               >
                 {preview ? '편집' : '읽기 모드'}
               </button>
-              <span>Ctrl / ⌘ + S 저장</span>
             </div>
           )}
           <div className={`document-canvas ${draft.content_type}`}>

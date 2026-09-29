@@ -42,11 +42,7 @@ export function DesktopNavigation({
                         : '자료 · 정보'}
                   </div>
                 )}
-                <TabsTrigger
-                  className="workspace-tab"
-                  value={id}
-                  title={`${label} (Alt+${index + 1})`}
-                >
+                <TabsTrigger className="workspace-tab" value={id} title={label}>
                   <Icon size={19} />
                   <span>{label}</span>
                 </TabsTrigger>

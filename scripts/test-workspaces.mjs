@@ -54,6 +54,7 @@ let files = [
 ];
 const writes = [];
 let failNextNote = false;
+let failNextNoteDelete = false;
 let failNextDelete = false;
 const events = [];
 const folders = [];
@@ -107,6 +108,10 @@ await context.route('**/api/**', async (route) => {
         ),
       });
     if (method === 'DELETE') {
+      if (failNextNoteDelete) {
+        failNextNoteDelete = false;
+        return reply({ message: '메모 삭제 테스트 오류' }, 503);
+      }
       notes = notes.map((note) =>
         note.id === url.searchParams.get('id')
           ? { ...note, deleted_at: new Date().toISOString() }
@@ -314,7 +319,7 @@ const waitFor = async (predicate, message) => {
 };
 try {
   await page.goto(`${base}/?view=notes`);
-  await page.getByRole('button', { name: /기존 제목/ }).click();
+  await page.locator('.note-tile').filter({ hasText: '기존 제목' }).click();
   await page.getByLabel('메모 제목', { exact: true }).fill('변경된 제목');
   await page.keyboard.press('Control+s');
   await waitFor(
@@ -322,7 +327,7 @@ try {
     'Existing note rename saved',
   );
   await page.getByRole('button', { name: '메모 목록으로' }).click();
-  await page.getByRole('button', { name: /변경된 제목/ }).waitFor();
+  await page.locator('.note-tile').filter({ hasText: '변경된 제목' }).waitFor();
   assert.equal(notes.length, 1, 'Rename does not create a new note');
   await page.getByRole('button', { name: '메모 작성' }).click();
   await page.getByLabel('메모 제목', { exact: true }).fill('저장 경합 테스트');
@@ -543,7 +548,7 @@ try {
   await pause(350);
   await page.goto(base + '/?view=notes');
   const savedNote = notes[0];
-  await page.getByRole('button', { name: new RegExp(savedNote.title) }).click();
+  await page.locator('.note-tile').filter({ hasText: savedNote.title }).click();
   await page.getByRole('button', { name: '메모 삭제', exact: true }).click();
   await page
     .getByRole('dialog')
@@ -575,6 +580,120 @@ try {
   );
   await page.screenshot({
     path: 'work/qa/notes-trash-desktop.png',
+    fullPage: true,
+  });
+
+  // Right-click targets the clicked card, even after another note was edited.
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /^전체/ })
+    .click();
+  await page.locator('.note-tile').filter({ hasText: savedNote.title }).click();
+  await page.getByRole('button', { name: '메모 목록으로' }).click();
+  const contextNote = notes.find((note) => note.id !== savedNote.id);
+  const contextTile = page
+    .locator('.note-tile')
+    .filter({ hasText: contextNote.title });
+  await contextTile.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).waitFor();
+  await page.keyboard.press('Alt+9');
+  assert.ok(
+    page.url().includes('view=notes'),
+    'Context menu blocks global navigation',
+  );
+  await page.screenshot({
+    path: 'work/qa/notes-context-menu.png',
+    fullPage: true,
+  });
+  await page.keyboard.press('Escape');
+  await page.getByRole('menu').waitFor({ state: 'hidden' });
+  await contextTile.click({ button: 'right' });
+  const headingBox = await page.locator('h1').boundingBox();
+  await page.mouse.click(headingBox.x + 5, headingBox.y + 5);
+  await page.getByRole('menu').waitFor({ state: 'hidden' });
+  await contextTile.click({ button: 'right' });
+  failNextNoteDelete = true;
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).click();
+  await page
+    .getByRole('alert')
+    .filter({ hasText: '메모 삭제 테스트 오류' })
+    .waitFor();
+  assert.ok(
+    !notes.find((note) => note.id === contextNote.id).deleted_at,
+    'Failed deletion preserves note',
+  );
+  await contextTile.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).click();
+  await contextTile.waitFor({ state: 'hidden' });
+  assert.ok(notes.find((note) => note.id === contextNote.id).deleted_at);
+  assert.ok(
+    !notes.find((note) => note.id === savedNote.id).deleted_at,
+    'Previously edited note is unchanged',
+  );
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /휴지통/ })
+    .click();
+  await contextTile.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: '복원', exact: true }).click();
+  await contextTile.waitFor({ state: 'hidden' });
+  assert.equal(
+    notes.find((note) => note.id === contextNote.id).deleted_at,
+    null,
+  );
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /^전체/ })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pause(350);
+  await page
+    .getByRole('button', { name: `${contextNote.title} 메뉴`, exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).waitFor();
+  await page.screenshot({
+    path: 'work/qa/notes-menu-mobile.png',
+    fullPage: true,
+  });
+  await page.getByRole('menuitem', { name: '열기', exact: true }).click();
+  await page.getByLabel('메모 제목', { exact: true }).waitFor();
+  assert.equal(
+    await page.getByLabel('메모 제목', { exact: true }).inputValue(),
+    contextNote.title,
+  );
+  assert.equal(
+    await page
+      .locator('.markdown-toolbar')
+      .getByText('Ctrl', { exact: false })
+      .count(),
+    0,
+  );
+  await page.getByRole('button', { name: '메모 목록으로' }).click();
+  await page.getByRole('button', { name: '전체 메뉴 열기' }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '설정', exact: true })
+    .click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page
+    .getByRole('heading', { name: '키보드 단축키', exact: true })
+    .waitFor();
+  await page.screenshot({
+    path: 'work/qa/settings-mobile.png',
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  await page.getByRole('tab', { name: '메모', exact: true }).click();
+  await page.locator('h1').click();
+  await page.keyboard.press('F1');
+  await page
+    .getByRole('heading', { name: '키보드 단축키', exact: true })
+    .waitFor();
+  assert.ok(page.url().includes('view=settings'));
+  assert.equal(await page.locator('.workspace-shortcuts-button').count(), 0);
+  await page.screenshot({
+    path: 'work/qa/settings-desktop.png',
     fullPage: true,
   });
 
@@ -734,6 +853,7 @@ try {
       'workouts',
       'files',
       'meals',
+      'settings',
     ]) {
       await page.goto(base + '/?view=' + view);
       await page.locator('.tab-view:visible').first().waitFor();
@@ -752,7 +872,7 @@ try {
     'No browser errors or native confirmation dialogs',
   );
   console.log(
-    'PASS: note save/trash/restore/failure, study CRUD/review/archive, meal grouping/filter, original download filename, Windows shortcuts, drive/calendar regressions and nine responsive panels.',
+    'PASS: note save/trash/restore/failure, study CRUD/review/archive, meal grouping/filter, original download filename, Windows shortcuts, drive/calendar regressions note context menus/settings and ten responsive panels.',
   );
 } catch (error) {
   console.error('Browser errors:', errors);

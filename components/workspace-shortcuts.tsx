@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Keyboard, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { WorkspaceDialog } from '@/components/workspace-dialog';
 
 export function WorkspaceShortcuts({
@@ -91,8 +91,7 @@ export function WorkspaceShortcuts({
         !event.metaKey
       ) {
         event.preventDefault();
-        setQuery('');
-        setOpen(true);
+        selectView('settings');
       }
     };
     window.addEventListener('keydown', keydown);
@@ -100,23 +99,11 @@ export function WorkspaceShortcuts({
   }, [navigation, selectView]);
   return (
     <>
-      <button
-        className="workspace-shortcuts-button"
-        title="작업 전환 및 단축키 (Ctrl+K)"
-        onClick={() => {
-          setQuery('');
-          setOpen(true);
-        }}
-      >
-        <Keyboard size={17} />
-        <span>단축키</span>
-        <kbd>Ctrl K</kbd>
-      </button>
       <WorkspaceDialog
         open={open}
         onOpenChange={setOpen}
-        title="작업 전환 · 단축키"
-        description="마우스와 키보드로 빠르게 이동하세요. 입력 중에는 Alt 단축키가 동작하지 않습니다."
+        title="작업 전환"
+        description="이동할 작업을 선택하세요. 사용 안내는 설정에서 확인할 수 있습니다."
       >
         <label className="search-field">
           <Search size={17} />
@@ -140,7 +127,7 @@ export function WorkspaceShortcuts({
         </label>
         <div className="shortcut-destinations">
           {navigation.map(
-            (item, index) =>
+            (item) =>
               item.label.includes(query) && (
                 <button
                   key={item.id}
@@ -150,60 +137,10 @@ export function WorkspaceShortcuts({
                   }}
                 >
                   <span>{item.label}</span>
-                  <kbd>Alt {index + 1}</kbd>
                 </button>
               ),
           )}
         </div>
-        <dl className="shortcut-guide">
-          <div>
-            <dt>작업 전환 / 도움말</dt>
-            <dd>
-              <kbd>Ctrl K</kbd> / <kbd>F1</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>현재 화면 검색</dt>
-            <dd>
-              <kbd>Ctrl Shift F</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>새 항목 / 드라이브 추가 메뉴</dt>
-            <dd>
-              <kbd>Alt N</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>메모 저장</dt>
-            <dd>
-              <kbd>Ctrl S</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>팝업 닫기</dt>
-            <dd>
-              <kbd>Esc</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>폴더 버튼에서 이름 변경</dt>
-            <dd>
-              <kbd>F2</kbd>
-            </dd>
-          </div>
-          <div>
-            <dt>드라이브 항목에서 휴지통 이동</dt>
-            <dd>
-              <kbd>Delete</kbd>
-            </dd>
-          </div>
-        </dl>
-        <p className="drive-hint">
-          Tab / Shift+Tab으로 이동하고 Enter / Space로 버튼을 실행합니다. 파일
-          다운로드 링크에서 Enter는 다운로드, Delete는 휴지통 이동입니다.
-          브라우저 뒤로 가기와 마우스 뒤로 버튼도 사용할 수 있습니다.
-        </p>
       </WorkspaceDialog>
     </>
   );
