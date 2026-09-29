@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { WorkspaceStatus } from '@/components/workspace-status';
+import { WorkspaceShortcuts } from '@/components/workspace-shortcuts';
 import {
   BedDouble,
   CalendarDays,
@@ -10,6 +11,7 @@ import {
   NotebookPen,
   TimerReset,
   UtensilsCrossed,
+  GraduationCap,
 } from 'lucide-react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 import { DesktopNavigation } from '@/components/layout/desktop-navigation';
@@ -23,6 +25,7 @@ const navigation = [
   { id: 'morning', label: '루틴 · 할 일', icon: MoonStar },
   { id: 'calendar', label: '캘린더', icon: CalendarDays },
   { id: 'notes', label: '메모', icon: NotebookPen },
+  { id: 'study', label: '복습 · 학습', icon: GraduationCap },
   { id: 'sleep', label: '수면', icon: BedDouble },
   { id: 'workouts', label: '운동', icon: Dumbbell },
   { id: 'files', label: '드라이브', icon: HardDrive },
@@ -186,6 +189,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="tab-workspace">
               <header className="tab-heading">
                 <h1>{title}</h1>
+                <WorkspaceShortcuts
+                  navigation={navigation}
+                  selectView={selectView}
+                />
               </header>
               {children}
             </div>

@@ -1,8 +1,12 @@
 // Run against a local dev server with dummy Supabase configuration.
 // Every /api request is intercepted; this test never writes production data.
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { once } from 'node:events';
 import { chromium } from 'playwright';
+import { attachmentHeader } from '../lib/download.ts';
+import { reviewInterval } from '../lib/study.ts';
 
 const base = process.env.TEST_BASE_URL ?? 'http://127.0.0.1:13002';
 if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname))
@@ -53,6 +57,32 @@ let failNextNote = false;
 let failNextDelete = false;
 const events = [];
 const folders = [];
+let studyItems = [];
+const studyReviews = [];
+let failNextRestore = false;
+// Edge may re-request a download outside Playwright interception. Serve actual
+// bytes locally so that second request cannot reach the unauthenticated app API.
+const downloadServer = createServer((request, response) => {
+  const file = files.find(
+    (item) =>
+      item.id ===
+      new URL(request.url, 'http://localhost').searchParams.get('id'),
+  );
+  if (!file) {
+    response.writeHead(404);
+    response.end();
+    return;
+  }
+  response.writeHead(200, {
+    'content-type': 'application/octet-stream',
+    'content-disposition': attachmentHeader(file.name),
+    'cache-control': 'no-store',
+  });
+  response.end('download verification');
+});
+downloadServer.listen(0, '127.0.0.1');
+await once(downloadServer, 'listening');
+const downloadBase = `http://127.0.0.1:${downloadServer.address().port}`;
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 await context.route('**/api/**', async (route) => {
@@ -68,8 +98,32 @@ await context.route('**/api/**', async (route) => {
   if (url.pathname === '/api/auth/status')
     return reply({ user: { id: 'qa-user' } });
   if (url.pathname === '/api/notes') {
-    if (method === 'GET') return reply({ notes });
+    if (method === 'GET')
+      return reply({
+        notes: notes.filter(
+          (note) =>
+            Boolean(note.deleted_at) ===
+            (url.searchParams.get('trash') === 'true'),
+        ),
+      });
+    if (method === 'DELETE') {
+      notes = notes.map((note) =>
+        note.id === url.searchParams.get('id')
+          ? { ...note, deleted_at: new Date().toISOString() }
+          : note,
+      );
+      return reply({ ok: true });
+    }
     const body = request.postDataJSON();
+    if (body.action === 'restore') {
+      if (failNextRestore) {
+        failNextRestore = false;
+        return reply({ message: '복원 테스트 오류' }, 503);
+      }
+      const note = notes.find((item) => item.id === body.id);
+      note.deleted_at = null;
+      return reply({ note });
+    }
     writes.push({ method, ...body });
     if (failNextNote) {
       failNextNote = false;
@@ -84,6 +138,66 @@ await context.route('**/api/**', async (route) => {
     };
     notes = [note, ...notes.filter((item) => item.id !== note.id)];
     return reply({ note }, method === 'POST' ? 201 : 200);
+  }
+  if (url.pathname === '/api/study') {
+    if (method === 'GET') {
+      const scope = url.searchParams.get('scope');
+      const filtered = studyItems.filter(
+        (item) =>
+          item.archived === (scope === 'archived') &&
+          (scope !== 'today' ||
+            item.due_date <= url.searchParams.get('today')) &&
+          item.title.includes(url.searchParams.get('q') ?? ''),
+      );
+      return reply({
+        items: filtered,
+        total: filtered.length,
+        reviews: studyReviews,
+      });
+    }
+    const body = request.postDataJSON();
+    await pause(200);
+    if (method === 'POST') {
+      const item = {
+        ...body,
+        stage: 0,
+        review_count: 0,
+        archived: false,
+        updated_at: new Date().toISOString(),
+      };
+      studyItems = [
+        item,
+        ...studyItems.filter((entry) => entry.id !== item.id),
+      ];
+      return reply({ item }, 201);
+    }
+    const item = studyItems.find((entry) => entry.id === body.id);
+    if (body.action === 'review') {
+      if (!studyReviews.some((r) => r.id === body.request_id)) {
+        const next = new Date(body.reviewed_on + 'T12:00:00Z');
+        next.setUTCDate(
+          next.getUTCDate() + reviewInterval(item.stage, body.rating),
+        );
+        item.stage =
+          body.rating === 'again'
+            ? 0
+            : Math.min(6, item.stage + (body.rating === 'easy' ? 2 : 1));
+        item.review_count++;
+        item.due_date = next.toISOString().slice(0, 10);
+        studyReviews.push({
+          id: body.request_id,
+          item_id: item.id,
+          rating: body.rating,
+          reviewed_on: body.reviewed_on,
+          next_due_date: item.due_date,
+        });
+      }
+    } else Object.assign(item, body);
+    item.updated_at = new Date().toISOString();
+    return reply({ item });
+  }
+  if (url.pathname === '/api/files/download') {
+    return route.continue({ url: downloadBase + url.pathname + url.search });
   }
   if (url.pathname === '/api/folders') {
     if (method === 'GET') return reply({ folders });
@@ -166,7 +280,18 @@ await context.route('**/api/**', async (route) => {
     return reply({ ok: true });
   }
   if (url.pathname === '/api/campus-meals')
-    return reply({ message: 'QA에서 외부 학식 호출 생략' }, 503);
+    return reply({
+      university: { id: 'dju', name: '대전대학교' },
+      weekLabel: '테스트 주간',
+      sourceUrl: 'https://www.dju.ac.kr',
+      dates: [{ date: date.slice(0, 10), label: '9.29 화' }],
+      meals: ['조식', '중식', '석식'].map((mealType) => ({
+        date: date.slice(0, 10),
+        cafeteria: '혜화문화관',
+        mealType,
+        menu: [mealType + ' 메뉴', '밥', '국'],
+      })),
+    });
   return reply({
     sessions: [],
     logs: [],
@@ -414,6 +539,188 @@ try {
   });
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  await page.goto(base + '/?view=notes');
+  const savedNote = notes[0];
+  await page.getByRole('button', { name: new RegExp(savedNote.title) }).click();
+  await page.getByRole('button', { name: '메모 삭제', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '휴지통으로 이동', exact: true })
+    .click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.ok(notes.find((item) => item.id === savedNote.id).deleted_at);
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /휴지통/ })
+    .click();
+  await page.locator('.note-tile').first().click();
+  failNextRestore = true;
+  await page.getByRole('button', { name: '메모 복원', exact: true }).click();
+  await page
+    .getByRole('alert')
+    .filter({ hasText: '복원 테스트 오류' })
+    .waitFor();
+  assert.ok(
+    notes.find((item) => item.id === savedNote.id).deleted_at,
+    'Failed restore leaves the note in trash',
+  );
+  await page.getByRole('button', { name: '메모 복원', exact: true }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(notes.find((item) => item.id === savedNote.id).deleted_at, null);
+  assert.equal(
+    notes.find((item) => item.id === savedNote.id).content,
+    savedNote.content,
+  );
+  await page.screenshot({
+    path: 'work/qa/notes-trash-desktop.png',
+    fullPage: true,
+  });
+
+  await page.keyboard.press('Control+k');
+  await page.getByLabel('작업 검색').fill('복습');
+  await page.keyboard.press('Enter');
+  await page.getByRole('heading', { name: '조금씩, 오래 기억하기' }).waitFor();
+  await page.locator('h1').click();
+  await page.keyboard.press('Alt+n');
+  await page.getByLabel('학습 제목', { exact: true }).fill('운영체제 복습');
+  await page.getByLabel('과목', { exact: true }).fill('컴퓨터공학');
+  await page
+    .getByLabel('학습 내용', { exact: true })
+    .fill('프로세스와 스레드의 차이를 설명하기');
+  await page.getByRole('button', { name: '학습 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(studyItems.length, 1);
+  await page.screenshot({ path: 'work/qa/study-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: '복습하기', exact: true }).click();
+  assert.equal(
+    await page
+      .getByText('프로세스와 스레드의 차이를 설명하기', { exact: true })
+      .count(),
+    0,
+    'Recall before reveal',
+  );
+  await page.getByRole('button', { name: '내용 확인' }).click();
+  await page
+    .getByText('프로세스와 스레드의 차이를 설명하기', { exact: true })
+    .waitFor();
+  await page.screenshot({
+    path: 'work/qa/study-review-desktop.png',
+    fullPage: true,
+  });
+  await page.getByRole('button', { name: /기억했어요/ }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(studyItems[0].review_count, 1);
+  await page.getByText('오늘 복습을 모두 마쳤어요', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '전체 학습', exact: true }).click();
+  await page
+    .getByRole('button', { name: '운영체제 복습 수정', exact: true })
+    .click();
+  await page
+    .getByLabel('학습 제목', { exact: true })
+    .fill('운영체제 핵심 복습');
+  await page.keyboard.press('Alt+9');
+  assert.ok(
+    page.url().includes('view=study'),
+    'Modal blocks navigation shortcuts',
+  );
+  await page.getByRole('button', { name: '학습 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page.keyboard.press('Control+Shift+f');
+  assert.equal(
+    await page
+      .getByLabel('학습 검색')
+      .evaluate((el) => el === document.activeElement),
+    true,
+  );
+  await page.keyboard.press('Alt+9');
+  assert.ok(
+    page.url().includes('view=study'),
+    'Input blocks navigation shortcuts',
+  );
+  await page
+    .getByRole('button', { name: '운영체제 핵심 복습 보관', exact: true })
+    .click();
+  await waitFor(() => studyItems[0].archived, 'Study archived');
+  await page.getByRole('button', { name: '보관함', exact: true }).click();
+  await page
+    .getByRole('button', { name: '운영체제 핵심 복습 다시 시작', exact: true })
+    .click();
+  await waitFor(() => !studyItems[0].archived, 'Study restored');
+  await page.getByRole('button', { name: '전체 학습', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pause(350);
+  await page.screenshot({ path: 'work/qa/study-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  await page.locator('h1').click();
+  await page.keyboard.press('Alt+9');
+  await page.getByRole('region', { name: '중식 식단' }).waitFor();
+  assert.equal(await page.locator('.meal-period').count(), 3);
+  await page.getByRole('button', { name: '석식', exact: true }).click();
+  assert.equal(await page.locator('.meal-period').count(), 1);
+  await page.getByRole('region', { name: '석식 식단' }).waitFor();
+  await page.getByRole('button', { name: '전체 식사', exact: true }).click();
+  await page.screenshot({ path: 'work/qa/meals-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pause(350);
+  await page.screenshot({ path: 'work/qa/meals-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  files.push({
+    id: crypto.randomUUID(),
+    name: '한글 보고서 (최종).txt',
+    size_bytes: 21,
+    mime_type: 'text/plain',
+    created_at: date,
+    deleted_at: null,
+    purge_started_at: null,
+    url: null,
+  });
+  await page.goto(base + '/?view=files');
+  const link = page.getByRole('link', {
+    name: '한글 보고서 (최종).txt 다운로드',
+    exact: true,
+  });
+  await link.waitFor();
+  const expectedName = await link.getAttribute('download');
+  assert.match(await link.getAttribute('href'), /^\/api\/files\/download\?id=/);
+  await link.evaluate((element, fixtureBase) => {
+    element.href = fixtureBase + '/download' + new URL(element.href).search;
+  }, downloadBase);
+  const downloadEvent = page.waitForEvent('download');
+  await link.click();
+  const download = await downloadEvent;
+  assert.equal(
+    download.suggestedFilename(),
+    expectedName,
+    'Unicode original filename preserved',
+  );
+  assert.equal(await download.failure(), null);
+  assert.equal(
+    await readFile(await download.path(), 'utf8'),
+    'download verification',
+  );
+  await link.focus();
+  await page.keyboard.press('Delete');
+  await waitFor(
+    () => Boolean(files.find((item) => item.name === expectedName)?.deleted_at),
+    'Delete on download link moves file to trash',
+  );
+  const folderButton = page.getByRole('button', { name: '자료', exact: true });
+  await folderButton.focus();
+  await page.keyboard.press('F2');
+  await page.getByLabel('폴더 이름', { exact: true }).fill('자료 수정');
+  await page.getByRole('button', { name: '폴더 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '자료 수정', exact: true }).focus();
+  await page.keyboard.press('Delete');
+  await waitFor(
+    () => Boolean(folders[0].deleted_at),
+    'Delete on folder button moves folder to trash',
+  );
+
   for (const width of [360, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await pause(350);
@@ -422,6 +729,7 @@ try {
       'morning',
       'calendar',
       'notes',
+      'study',
       'sleep',
       'workouts',
       'files',
@@ -444,7 +752,7 @@ try {
     'No browser errors or native confirmation dialogs',
   );
   console.log(
-    'PASS: note rename, single-flight creation, Ctrl+S, retry, Markdown/XSS, viewport state, drive trash/restore/failure rollback/drop upload, calendar dialog and responsive layouts.',
+    'PASS: note save/trash/restore/failure, study CRUD/review/archive, meal grouping/filter, original download filename, Windows shortcuts, drive/calendar regressions and nine responsive panels.',
   );
 } catch (error) {
   console.error('Browser errors:', errors);
@@ -453,4 +761,5 @@ try {
   throw error;
 } finally {
   await browser.close();
+  downloadServer.close();
 }

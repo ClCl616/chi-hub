@@ -33,16 +33,20 @@ export function DesktopNavigation({
           <TabsList className="workspace-tab-list" aria-label="작업 구분">
             {navigation.map(({ id, label, icon: Icon }, index) => (
               <Fragment key={id}>
-                {[0, 4, 6].includes(index) && (
+                {[0, 5, 7].includes(index) && (
                   <div className="nav-group-label">
                     {index === 0
                       ? '계획 · 집중'
-                      : index === 4
+                      : index === 5
                         ? '생활 관리'
                         : '자료 · 정보'}
                   </div>
                 )}
-                <TabsTrigger className="workspace-tab" value={id}>
+                <TabsTrigger
+                  className="workspace-tab"
+                  value={id}
+                  title={`${label} (Alt+${index + 1})`}
+                >
                   <Icon size={19} />
                   <span>{label}</span>
                 </TabsTrigger>

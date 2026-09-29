@@ -12,6 +12,7 @@ export type Note = {
   category: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
 };
 export type Draft = Omit<Note, 'created_at' | 'updated_at'>;
 const blank = (): Draft => ({

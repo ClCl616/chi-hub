@@ -1,8 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ExternalLink, MapPin, RefreshCw, UtensilsCrossed } from 'lucide-react';
+import {
+  ExternalLink,
+  MapPin,
+  RefreshCw,
+  UtensilsCrossed,
+  Sunrise,
+  Sun,
+  Moon,
+} from 'lucide-react';
 import type { CampusMealsResponse, SchoolId } from '@/lib/campus-meals';
+import { mealPeriod, mealPeriods } from '@/lib/campus-meals';
 
 const schools: { id: SchoolId; name: string }[] = [
   { id: 'dju', name: '대전대학교' },
@@ -10,8 +19,12 @@ const schools: { id: SchoolId; name: string }[] = [
 const storageKey = 'chi-hub-university';
 
 function initialDate(data: CampusMealsResponse) {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
-  return data.dates.some((item) => item.date === today) ? today : data.dates[0]?.date ?? '';
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+  }).format(new Date());
+  return data.dates.some((item) => item.date === today)
+    ? today
+    : (data.dates[0]?.date ?? '');
 }
 
 export function MealsWorkspace() {
@@ -19,6 +32,7 @@ export function MealsWorkspace() {
   const [data, setData] = useState<CampusMealsResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [cafeteria, setCafeteria] = useState('전체');
+  const [period, setPeriod] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,22 +43,31 @@ export function MealsWorkspace() {
     }
   }, []);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch(`/api/campus-meals?university=${school}`, { signal });
-      const result = (await response.json()) as CampusMealsResponse & { error?: string };
-      if (!response.ok) throw new Error(result.error || '식단을 불러오지 못했습니다.');
-      setData(result);
-      setSelectedDate(initialDate(result));
-      setCafeteria('전체');
-    } catch (loadError) {
-      if ((loadError as Error).name !== 'AbortError') setError((loadError as Error).message);
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [school]);
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await fetch(`/api/campus-meals?university=${school}`, {
+          signal,
+        });
+        const result = (await response.json()) as CampusMealsResponse & {
+          error?: string;
+        };
+        if (!response.ok)
+          throw new Error(result.error || '식단을 불러오지 못했습니다.');
+        setData(result);
+        setSelectedDate(initialDate(result));
+        setCafeteria('전체');
+      } catch (loadError) {
+        if ((loadError as Error).name !== 'AbortError')
+          setError((loadError as Error).message);
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [school],
+  );
 
   useEffect(() => {
     window.localStorage.setItem(storageKey, school);
@@ -58,7 +81,9 @@ export function MealsWorkspace() {
     [data],
   );
   const visibleMeals = (data?.meals ?? []).filter(
-    (meal) => meal.date === selectedDate && (cafeteria === '전체' || meal.cafeteria === cafeteria),
+    (meal) =>
+      meal.date === selectedDate &&
+      (cafeteria === '전체' || meal.cafeteria === cafeteria),
   );
 
   return (
@@ -77,45 +102,149 @@ export function MealsWorkspace() {
       </section>
 
       {loading ? (
-        <div className="meal-state"><RefreshCw className="spin" size={20} /> 공식 식단을 불러오는 중…</div>
+        <div className="meal-state">
+          <RefreshCw className="spin" size={20} /> 공식 식단을 불러오는 중…
+        </div>
       ) : error ? (
         <div className="meal-state error" role="alert">
-          <span>{error}</span><button onClick={() => load()} type="button">다시 시도</button>
+          <span>{error}</span>
+          <button onClick={() => load()} type="button">
+            다시 시도
+          </button>
         </div>
       ) : data ? (
         <>
           <section className="meal-overview">
             <div>
-              <p className="card-label"><UtensilsCrossed size={15} /> {data.university.name}</p>
+              <p className="card-label">
+                <UtensilsCrossed size={15} /> {data.university.name}
+              </p>
               <h2>{data.weekLabel}</h2>
               <p>학교 공식 페이지 기준 · 30분마다 새로 확인</p>
             </div>
-            <a href={data.sourceUrl} target="_blank" rel="noreferrer">공식 페이지 <ExternalLink size={14} /></a>
+            <a href={data.sourceUrl} target="_blank" rel="noreferrer">
+              공식 페이지 <ExternalLink size={14} />
+            </a>
           </section>
 
           {data.dates.length > 0 && (
             <>
               <section className="meal-date-strip" aria-label="날짜 선택">
                 {data.dates.map((item) => (
-                  <button className={selectedDate === item.date ? 'active' : ''} key={item.date} onClick={() => setSelectedDate(item.date)} type="button">
-                    <span>{item.label.split(' ')[0]}</span><strong>{item.label.split(' ')[1]}요일</strong>
+                  <button
+                    className={selectedDate === item.date ? 'active' : ''}
+                    key={item.date}
+                    onClick={() => setSelectedDate(item.date)}
+                    type="button"
+                  >
+                    <span>{item.label.split(' ')[0]}</span>
+                    <strong>{item.label.split(' ')[1]}요일</strong>
                   </button>
                 ))}
               </section>
               <section className="cafeteria-filter" aria-label="식당 선택">
-                {cafeterias.map((name) => <button className={cafeteria === name ? 'active' : ''} key={name} onClick={() => setCafeteria(name)} type="button">{name}</button>)}
+                {cafeterias.map((name) => (
+                  <button
+                    className={cafeteria === name ? 'active' : ''}
+                    key={name}
+                    onClick={() => setCafeteria(name)}
+                    type="button"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </section>
+              <section className="meal-period-filter" aria-label="식사 구분">
+                {[{ id: 'all', label: '전체 식사' }, ...mealPeriods].map(
+                  (item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={period === item.id}
+                      onClick={() => setPeriod(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ),
+                )}
               </section>
               {visibleMeals.length ? (
-                <section className="meal-card-grid">
-                  {visibleMeals.map((meal, index) => (
-                    <article className="meal-card" key={`${meal.cafeteria}-${meal.mealType}-${index}`}>
-                      <header><span>{meal.cafeteria}</span><strong>{meal.mealType}</strong></header>
-                      <ul>{meal.menu.map((item, itemIndex) => <li key={`${item}-${itemIndex}`}>{item}</li>)}</ul>
-                      {meal.prices?.length ? <footer>{meal.prices.map((price) => <span key={price}>{price}</span>)}</footer> : null}
-                    </article>
-                  ))}
-                </section>
-              ) : <div className="meal-state">선택한 날짜에 공개된 식단이 없습니다.</div>}
+                <div className="meal-periods">
+                  {mealPeriods
+                    .filter((item) => period === 'all' || period === item.id)
+                    .map((item) => {
+                      const entries = visibleMeals.filter(
+                        (meal) => mealPeriod(meal.mealType) === item.id,
+                      );
+                      if (
+                        period === 'all' &&
+                        item.id === 'other' &&
+                        !entries.length
+                      )
+                        return null;
+                      const Icon =
+                        item.id === 'breakfast'
+                          ? Sunrise
+                          : item.id === 'lunch'
+                            ? Sun
+                            : item.id === 'dinner'
+                              ? Moon
+                              : UtensilsCrossed;
+                      return (
+                        <section
+                          key={item.id}
+                          className={`meal-period ${item.id}`}
+                          aria-label={`${item.label} 식단`}
+                        >
+                          <header className="meal-period-heading">
+                            <Icon size={23} />
+                            <h3>
+                              {item.label} <span>{item.description}</span>
+                            </h3>
+                            <small>{entries.length}개 식단</small>
+                          </header>
+                          {entries.length ? (
+                            <div className="meal-card-grid">
+                              {entries.map((meal, index) => (
+                                <article
+                                  className="meal-card"
+                                  key={`${meal.cafeteria}-${meal.mealType}-${index}`}
+                                >
+                                  <header>
+                                    <span>{meal.cafeteria}</span>
+                                    <strong>{meal.mealType}</strong>
+                                  </header>
+                                  <ul>
+                                    {meal.menu.map((item, itemIndex) => (
+                                      <li key={`${item}-${itemIndex}`}>
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {meal.prices?.length ? (
+                                    <footer>
+                                      {meal.prices.map((price) => (
+                                        <span key={price}>{price}</span>
+                                      ))}
+                                    </footer>
+                                  ) : null}
+                                </article>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="meal-period-empty">
+                              공개된 {item.label} 식단이 없습니다.
+                            </p>
+                          )}
+                        </section>
+                      );
+                    })}
+                </div>
+              ) : (
+                <div className="meal-state">
+                  선택한 날짜에 공개된 식단이 없습니다.
+                </div>
+              )}
             </>
           )}
 
@@ -125,7 +254,11 @@ export function MealsWorkspace() {
               <section className="facility-grid">
                 {data.facilities.map((facility) => (
                   <article key={`${facility.campus}-${facility.location}`}>
-                    <span>{facility.campus}</span><h3>{facility.cafeteria}</h3><p><MapPin size={14} /> {facility.location}</p>
+                    <span>{facility.campus}</span>
+                    <h3>{facility.cafeteria}</h3>
+                    <p>
+                      <MapPin size={14} /> {facility.location}
+                    </p>
                   </article>
                 ))}
               </section>

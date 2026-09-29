@@ -34,7 +34,7 @@ export async function GET(request: Request) {
         if (trash) return { ...file, url: null };
         const { data: signed } = await supabase.storage
           .from('private-files')
-          .createSignedUrl(file.storage_path, 300, { download: file.name });
+          .createSignedUrl(file.storage_path, 300);
         return { ...file, url: signed?.signedUrl ?? null };
       }),
     );

@@ -6,6 +6,7 @@ import './workspace.css';
 import './desktop.css';
 import './mobile.css';
 import './enhancements.css';
+import './productivity.css';
 import { PwaRegister } from '@/components/pwa-register';
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({

@@ -23,3 +23,9 @@ console.log(`Trash cleanup completed: ${count} expired files removed.`);
 
 const folderCleanup = await client.rpc('purge_expired_folders');
 if (folderCleanup.error) throw new Error('Folder cleanup failed.');
+
+const noteCleanup = await client.rpc('purge_expired_notes');
+if (noteCleanup.error) throw new Error('Note cleanup failed.');
+console.log(
+  `Note cleanup completed: ${noteCleanup.data} expired notes removed.`,
+);

@@ -236,6 +236,7 @@ export function MorningWorkspace() {
         <form className="stack-form" onSubmit={(e) => add(e, 't')}>
           <input
             aria-label="새 할 일"
+            data-workspace-new
             value={t}
             onChange={(e) => setT(e.target.value)}
             placeholder="예: 서류 제출"

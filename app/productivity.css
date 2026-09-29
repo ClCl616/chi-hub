@@ -1,0 +1,460 @@
+/* Desktop input and reading defaults, shared with touch layouts. */
+body {
+  font-family: var(--font-geist-sans), 'Segoe UI', 'Malgun Gothic', sans-serif;
+}
+html {
+  scrollbar-gutter: stable;
+}
+button:not(:disabled),
+summary,
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+button,
+[role='tab'],
+kbd {
+  user-select: none;
+}
+:where(
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [tabindex],
+  [contenteditable]
+):focus-visible {
+  outline: 3px solid #69831c;
+  outline-offset: 3px;
+}
+.tab-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workspace-shortcuts-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 11px;
+  background: var(--surface);
+  font-size: 12px;
+}
+kbd {
+  border: 1px solid #d8dbd0;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 2px 5px;
+  background: #f6f7f2;
+  color: #465037;
+  font:
+    11px 'Segoe UI',
+    sans-serif;
+  white-space: nowrap;
+}
+.shortcut-destinations {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 12px 0;
+}
+.shortcut-destinations button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+  text-align: left;
+  font-size: 13px;
+}
+.shortcut-guide {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  font-size: 12px;
+}
+.shortcut-guide > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.shortcut-guide dd {
+  margin: 0;
+}
+.drive-item:focus-within {
+  border-color: #69831c;
+  background: #f5f8eb;
+}
+.drive-item-actions > :is(a, button) {
+  min-width: 32px;
+  min-height: 32px;
+}
+.trash-note-preview {
+  max-height: 42vh;
+  overflow: auto;
+  margin: 12px 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8f8f3;
+}
+.trash-note-preview pre,
+.study-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.75;
+}
+.trash-note-preview img {
+  max-width: 100%;
+  height: auto;
+}
+.meal-period-filter,
+.study-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.meal-period-filter button,
+.study-filters button {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 15px;
+  background: white;
+  font-size: 13px;
+}
+.meal-period-filter button[aria-pressed='true'],
+.study-filters button[aria-pressed='true'] {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.meal-periods {
+  display: grid;
+  gap: 26px;
+  margin-top: 22px;
+}
+.meal-period {
+  border: 1px solid #dddcd1;
+  border-radius: 18px;
+  padding: 18px;
+  background: #faf9f3;
+}
+.meal-period.breakfast {
+  border-top: 4px solid #d49b35;
+}
+.meal-period.lunch {
+  border-top: 4px solid #7b9829;
+}
+.meal-period.dinner {
+  border-top: 4px solid #707da5;
+}
+.meal-period-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.meal-period-heading h3 {
+  margin: 0;
+  font-size: 21px;
+}
+.meal-period-heading h3 span {
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 5px;
+  color: var(--muted-ink);
+}
+.meal-period-heading > small {
+  margin-left: auto;
+  color: var(--muted-ink);
+}
+.meal-period-empty {
+  margin: 0;
+  padding: 15px 0;
+  font-size: 13px;
+  color: var(--muted-ink);
+}
+.meal-period .meal-card {
+  min-height: 220px;
+  padding: 18px;
+}
+.meal-period .meal-card header {
+  flex-wrap: wrap;
+}
+.meal-period .meal-card header strong {
+  font-size: 12px;
+  white-space: normal;
+}
+.study-workspace {
+  margin-top: 24px;
+}
+.study-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  background: #eef3df;
+  border-radius: 18px;
+  padding: 28px;
+}
+.study-intro h2 {
+  margin: 12px 0;
+  font-size: clamp(22px, 3vw, 32px);
+  letter-spacing: -0.04em;
+}
+.study-intro p:last-child {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #59634c;
+  margin: 0;
+}
+.study-intro .submit-button {
+  flex-shrink: 0;
+}
+.study-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 24px;
+}
+.study-toolbar .search-field {
+  max-width: 320px;
+}
+.study-help {
+  font-size: 12px;
+  color: var(--muted-ink);
+  line-height: 1.8;
+}
+.study-count {
+  display: flex;
+  justify-content: space-between;
+  margin: 25px 0 12px;
+  font-size: 13px;
+}
+.study-count span {
+  color: var(--muted-ink);
+}
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.study-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+  padding: 20px;
+  min-width: 0;
+}
+.study-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted-ink);
+}
+.study-subject {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #eef3df;
+  font-size: 12px;
+  color: #496014;
+  overflow-wrap: anywhere;
+}
+.study-card h3 {
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 18px 0 8px;
+  overflow-wrap: anywhere;
+}
+.study-card p {
+  font-size: 12px;
+  color: var(--muted-ink);
+  line-height: 1.7;
+}
+.study-card small {
+  font-size: 11px;
+  margin-bottom: 18px;
+  color: var(--muted-ink);
+}
+.study-card .overdue {
+  color: #9c491e;
+}
+.study-card footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+}
+.study-card footer .submit-button {
+  margin-right: auto;
+  font-size: 12px;
+}
+.study-empty {
+  padding: 55px 20px;
+  text-align: center;
+  color: #5d684f;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+}
+.study-empty svg {
+  margin: auto;
+}
+.study-empty h3 {
+  font-size: 20px;
+}
+.study-empty p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.study-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin-top: 20px;
+}
+.study-pagination button {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 8px 15px;
+}
+.study-review {
+  display: grid;
+  gap: 16px;
+}
+.study-answer {
+  max-height: 40vh;
+  overflow: auto;
+  background: #f8f9f4;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  margin: 0;
+}
+.study-ratings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.study-ratings button {
+  border: 1px solid #c6cdb6;
+  border-radius: 10px;
+  padding: 13px 8px;
+  background: #f1f6e5;
+  display: grid;
+  gap: 5px;
+}
+.study-ratings button:first-child {
+  background: #fff5e3;
+  border-color: #e3cdac;
+}
+.study-ratings strong {
+  font-size: 13px;
+}
+.study-ratings span,
+.study-history {
+  font-size: 12px;
+  color: var(--muted-ink);
+}
+.study-history p {
+  margin: 5px 0;
+}
+.workspace-dialog .stack-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px;
+  resize: vertical;
+}
+@media (hover: hover) and (pointer: fine) {
+  .shortcut-destinations button:hover,
+  .study-filters button:not([aria-pressed='true']):hover {
+    background: #eef3df;
+  }
+  .study-card:hover {
+    border-color: #aebc86;
+  }
+  .note-tile:hover .note-paper {
+    box-shadow: 0 4px 14px #00000012;
+  }
+}
+@media (max-width: 1100px) {
+  .study-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .meal-period .meal-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 820px) {
+  .drive-item-actions > :is(a, button) {
+    min-width: 42px;
+    min-height: 42px;
+  }
+  .study-intro {
+    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .study-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .study-toolbar .search-field {
+    max-width: none;
+  }
+  .study-grid,
+  .meal-period .meal-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .workspace-shortcuts-button kbd {
+    display: none;
+  }
+  .workspace-shortcuts-button {
+    flex-shrink: 0;
+  }
+  .meal-period {
+    padding: 14px;
+  }
+  .meal-period-filter button {
+    flex-grow: 1;
+  }
+  .shortcut-destinations {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media (forced-colors: active) {
+  :is(button, a, input, [tabindex]):focus-visible {
+    outline: 3px solid Highlight;
+  }
+  button[aria-pressed='true'],
+  [role='tab'][aria-selected='true'] {
+    outline: 2px solid Highlight;
+  }
+}

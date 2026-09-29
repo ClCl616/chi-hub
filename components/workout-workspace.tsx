@@ -111,6 +111,7 @@ export function WorkoutWorkspace() {
             <span>운동</span>
             <input
               maxLength={80}
+              data-workspace-new
               onChange={(event) => setTitle(event.target.value)}
               placeholder="예: 하체 근력 운동"
               required

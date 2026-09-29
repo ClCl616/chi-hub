@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { errorMessage, getAuthContext } from '@/lib/supabase/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthContext();
     if (!user)
@@ -9,14 +9,19 @@ export async function GET() {
         { message: '로그인이 필요합니다.' },
         { status: 401 },
       );
-    const { data, error } = await supabase
+    const trash = new URL(request.url).searchParams.get('trash') === 'true';
+    let query = supabase
       .from('notes')
       .select(
-        'id,title,content,pinned,content_type,category,drawing_data,created_at,updated_at',
+        'id,title,content,pinned,content_type,category,drawing_data,created_at,updated_at,deleted_at',
       )
       .order('pinned', { ascending: false })
       .order('updated_at', { ascending: false })
       .limit(200);
+    query = trash
+      ? query.not('deleted_at', 'is', null)
+      : query.is('deleted_at', null);
+    const { data, error } = await query;
     if (error) throw error;
     return NextResponse.json({ notes: data });
   } catch (error) {
@@ -79,6 +84,11 @@ export async function POST(request: Request) {
       .select()
       .single();
     if (error) throw error;
+    if (data.deleted_at)
+      return NextResponse.json(
+        { message: '휴지통의 메모는 복원한 뒤 수정해주세요.' },
+        { status: 409 },
+      );
     return NextResponse.json({ note: data }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });
@@ -110,6 +120,23 @@ export async function PATCH(request: Request) {
         { message: '메모를 선택해주세요.' },
         { status: 400 },
       );
+    if (body.action === 'restore') {
+      const { data, error } = await supabase
+        .from('notes')
+        .update({ deleted_at: null, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .gt('deleted_at', new Date(Date.now() - 30 * 86400000).toISOString())
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      if (!data)
+        return NextResponse.json(
+          { message: '보관 기간이 지났거나 복원할 수 없는 메모입니다.' },
+          { status: 409 },
+        );
+      return NextResponse.json({ note: data });
+    }
     const updates: {
       title?: string;
       content?: string;
@@ -138,6 +165,8 @@ export async function PATCH(request: Request) {
       .from('notes')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
       .select()
       .single();
     if (error) throw error;
@@ -160,8 +189,20 @@ export async function DELETE(request: Request) {
         { message: '메모를 선택해주세요.' },
         { status: 400 },
       );
-    const { error } = await supabase.from('notes').delete().eq('id', id);
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
     if (error) throw error;
+    if (!data)
+      return NextResponse.json(
+        { message: '메모가 없거나 이미 휴지통에 있습니다.' },
+        { status: 404 },
+      );
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 503 });

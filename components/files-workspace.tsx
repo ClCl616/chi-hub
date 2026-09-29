@@ -311,6 +311,7 @@ export function FilesWorkspace() {
       <aside className="drive-sidebar">
         <DropdownMenu>
           <DropdownMenuTrigger
+            data-workspace-new
             className="drive-upload"
             disabled={busy || trash || folderBusy}
           >
@@ -498,6 +499,31 @@ export function FilesWorkspace() {
               <article key={item.id} className="drive-folder">
                 <button
                   className="folder-open"
+                  title="Enter: 열기 · F2: 이름 변경 · Delete: 휴지통"
+                  onKeyDown={(event) => {
+                    if (
+                      event.nativeEvent.isComposing ||
+                      event.ctrlKey ||
+                      event.altKey ||
+                      event.metaKey ||
+                      event.shiftKey ||
+                      trash ||
+                      busy ||
+                      folderBusy
+                    )
+                      return;
+                    if (event.key === 'F2') {
+                      event.preventDefault();
+                      setRenaming(item);
+                      setFolderName(item.name);
+                      setFolderError('');
+                      setFolderDialog(true);
+                    }
+                    if (event.key === 'Delete' && !event.repeat) {
+                      event.preventDefault();
+                      void trashFolder(item);
+                    }
+                  }}
                   disabled={trash || busy || folderBusy}
                   onClick={() => {
                     setFolder(item.id);
@@ -611,16 +637,28 @@ export function FilesWorkspace() {
                     </button>
                   ) : (
                     <>
-                      {item.url && (
-                        <a
-                          aria-label={`${item.name} 다운로드`}
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <Download size={17} />
-                        </a>
-                      )}
+                      <a
+                        aria-label={`${item.name} 다운로드`}
+                        title="원래 파일명으로 다운로드"
+                        href={`/api/files/download?id=${encodeURIComponent(item.id)}`}
+                        download={item.name}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === 'Delete' &&
+                            !event.nativeEvent.isComposing &&
+                            !event.repeat &&
+                            !event.ctrlKey &&
+                            !event.altKey &&
+                            !event.metaKey &&
+                            !event.shiftKey
+                          ) {
+                            event.preventDefault();
+                            void move(item);
+                          }
+                        }}
+                      >
+                        <Download size={17} />
+                      </a>
                       <button
                         aria-label={`${item.name} 휴지통으로 이동`}
                         onClick={() => void move(item)}

@@ -174,6 +174,18 @@ export function CalendarWorkspace() {
             </h2>
           </div>
           <div className="calendar-navigation">
+            <button
+              data-workspace-new
+              onClick={() => {
+                setDraft(fresh(dateKey(cursor)));
+                setSelected(dateKey(cursor));
+                setError('');
+                setOpen(true);
+              }}
+              aria-label="새 일정"
+            >
+              <Plus size={18} />
+            </button>
             <button aria-label="이전 기간" onClick={() => shift(-1)}>
               <ChevronLeft size={18} />
             </button>

@@ -12,6 +12,7 @@ import {
   Save,
   Search,
   Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -30,6 +31,7 @@ import { WorkspaceDialog } from '@/components/workspace-dialog';
 const categories = ['업무', '공부', '아이디어', '개인'];
 export function NotesWorkspace() {
   const notes = useApi<{ notes: Note[] }>('/api/notes');
+  const trashNotes = useApi<{ notes: Note[] }>('/api/notes?trash=true');
   const editor = useNoteEditor((note) =>
     notes.setData((data) => ({
       notes: [
@@ -50,12 +52,22 @@ export function NotesWorkspace() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [trashedNote, setTrashedNote] = useState<Note | null>(null);
+  const [notice, setNotice] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+  const trash = category === '휴지통';
+  const records = trash ? trashNotes : notes;
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key.toLowerCase() === 's' &&
         editing &&
+        !document.querySelector('[role="dialog"]') &&
         root.current?.getClientRects().length
       ) {
         event.preventDefault();
@@ -65,10 +77,11 @@ export function NotesWorkspace() {
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
   }, [save, editing]);
-  const filtered = (notes.data?.notes ?? [])
+  const filtered = (records.data?.notes ?? [])
     .filter(
       (note) =>
-        (category === '전체' ||
+        (trash ||
+          category === '전체' ||
           (category === '고정' ? note.pinned : note.category === category)) &&
         `${note.title} ${note.content_type === 'drawing' ? '' : note.content}`
           .toLowerCase()
@@ -101,9 +114,40 @@ export function NotesWorkspace() {
       editor.reset();
       setEditing(false);
       setDeleteOpen(false);
+      setNotice('휴지통으로 이동했습니다. 30일 동안 복원할 수 있습니다.');
+      void trashNotes.refresh();
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : '삭제하지 못했습니다.',
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+  async function restore(note: Note) {
+    if (deleting) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const result = await apiRequest<{ note: Note }>('/api/notes', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: note.id, action: 'restore' }),
+      });
+      trashNotes.setData((data) => ({
+        notes: (data?.notes ?? []).filter((item) => item.id !== note.id),
+      }));
+      notes.setData((data) => ({
+        notes: [
+          result.note,
+          ...(data?.notes ?? []).filter((item) => item.id !== note.id),
+        ],
+      }));
+      setTrashedNote(null);
+      setNotice('메모를 복원했습니다. 기존 카테고리에서 확인할 수 있습니다.');
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : '복원하지 못했습니다.',
       );
     } finally {
       setDeleting(false);
@@ -117,18 +161,31 @@ export function NotesWorkspace() {
             <h2>
               <BookOpen size={19} /> 내 메모
             </h2>
-            {['전체', '고정', ...categories].map((item) => (
+            {['전체', '고정', ...categories, '휴지통'].map((item) => (
               <button
                 key={item}
                 className={category === item ? 'active' : ''}
-                onClick={() => setCategory(item)}
+                onClick={() => {
+                  setCategory(item);
+                  setQuery('');
+                  setNotice('');
+                  if (item === '휴지통') void trashNotes.refresh();
+                }}
               >
-                <Folder size={17} />
+                {item === '휴지통' ? (
+                  <Trash2 size={17} />
+                ) : (
+                  <Folder size={17} />
+                )}
                 {item}
                 <span>
                   {
-                    (notes.data?.notes ?? []).filter(
+                    (item === '휴지통'
+                      ? (trashNotes.data?.notes ?? [])
+                      : (notes.data?.notes ?? [])
+                    ).filter(
                       (note) =>
+                        item === '휴지통' ||
                         item === '전체' ||
                         (item === '고정'
                           ? note.pinned
@@ -145,10 +202,16 @@ export function NotesWorkspace() {
                 <p className="card-label">MY NOTES</p>
                 <h2>{category === '전체' ? '모든 메모' : category}</h2>
               </div>
-              <button className="submit-button" onClick={() => void open()}>
-                <Plus size={17} />
-                메모 작성
-              </button>
+              {!trash && (
+                <button
+                  className="submit-button"
+                  data-workspace-new
+                  onClick={() => void open()}
+                >
+                  <Plus size={17} />
+                  메모 작성
+                </button>
+              )}
             </header>
             <div className="library-filters">
               <label className="search-field">
@@ -177,17 +240,33 @@ export function NotesWorkspace() {
                 </button>
               </div>
             </div>
+            {trash && (
+              <p className="drive-hint">
+                삭제한 메모는 30일 동안 복원할 수 있으며, 이후 자동으로 영구
+                삭제됩니다.
+              </p>
+            )}
+            {notice && (
+              <output className="drive-message" aria-live="polite">
+                {notice}
+              </output>
+            )}
             <DataNotice
-              loading={notes.loading}
-              error={notes.error}
-              onRetry={notes.refresh}
+              loading={records.loading}
+              error={records.error}
+              onRetry={records.refresh}
             />
             <div className={`note-gallery ${view}`}>
               {filtered.map((note) => (
                 <button
                   className="note-tile"
                   key={note.id}
-                  onClick={() => void open(note)}
+                  onClick={() => {
+                    if (trash) {
+                      setTrashedNote(note);
+                      setError('');
+                    } else void open(note);
+                  }}
                 >
                   <div className={`note-paper ${note.content_type}`}>
                     {note.content_type === 'drawing' ? (
@@ -210,23 +289,29 @@ export function NotesWorkspace() {
                     {note.title || '제목 없는 메모'}
                   </strong>
                   <small>
-                    {note.category} ·{' '}
-                    {new Date(note.updated_at).toLocaleDateString('ko-KR')}
+                    {trash ? '삭제일' : note.category} ·{' '}
+                    {new Date(
+                      note.deleted_at || note.updated_at,
+                    ).toLocaleDateString('ko-KR')}
                   </small>
                 </button>
               ))}
             </div>
-            {!notes.loading && !notes.error && !filtered.length && (
+            {!records.loading && !records.error && !filtered.length && (
               <DataNotice
                 empty={
-                  query ? '검색 결과가 없습니다.' : '새 메모를 만들어보세요.'
+                  query
+                    ? '검색 결과가 없습니다.'
+                    : trash
+                      ? '휴지통이 비어 있습니다.'
+                      : '새 메모를 만들어보세요.'
                 }
               />
             )}
           </section>
         </>
       ) : (
-        <section className="note-document">
+        <section className="note-document" inert={deleting}>
           <header className="document-toolbar">
             <button
               aria-label="메모 목록으로"
@@ -370,8 +455,8 @@ export function NotesWorkspace() {
         onOpenChange={(value) => {
           if (!deleting) setDeleteOpen(value);
         }}
-        title="메모를 삭제할까요?"
-        description="삭제한 메모는 복구할 수 없습니다."
+        title="메모를 휴지통으로 이동할까요?"
+        description="30일 동안 복원할 수 있으며, 이후 자동으로 영구 삭제됩니다."
       >
         <div className="dialog-actions">
           <button onClick={() => setDeleteOpen(false)} disabled={deleting}>
@@ -382,10 +467,54 @@ export function NotesWorkspace() {
             onClick={() => void remove()}
             disabled={deleting}
           >
-            {deleting ? '삭제 중…' : '삭제'}
+            {deleting ? '이동 중…' : '휴지통으로 이동'}
           </button>
         </div>
         {error && <p role="alert">{error}</p>}
+      </WorkspaceDialog>
+      <WorkspaceDialog
+        open={!!trashedNote}
+        onOpenChange={(value) => {
+          if (!value && !deleting) setTrashedNote(null);
+        }}
+        title={trashedNote?.title || '삭제한 메모'}
+        description="내용을 확인하고 메모를 복원할 수 있습니다."
+      >
+        {trashedNote && (
+          <>
+            <p className="drive-hint">
+              {new Date(
+                new Date(trashedNote.deleted_at!).getTime() + 30 * 86400000,
+              ).toLocaleDateString('ko-KR')}{' '}
+              이후 영구 삭제
+            </p>
+            <div className="trash-note-preview">
+              {trashedNote.content_type === 'drawing' ? (
+                <Image
+                  src={trashedNote.content}
+                  alt="삭제한 필기"
+                  width={400}
+                  height={300}
+                  unoptimized
+                />
+              ) : (
+                <pre>{trashedNote.content}</pre>
+              )}
+            </div>
+            <button
+              className="submit-button"
+              disabled={
+                deleting ||
+                Date.parse(trashedNote.deleted_at!) + 30 * 86400000 <= now
+              }
+              onClick={() => void restore(trashedNote)}
+            >
+              <RotateCcw size={16} />
+              {deleting ? '복원 중…' : '메모 복원'}
+            </button>
+            {error && <p role="alert">{error}</p>}
+          </>
+        )}
       </WorkspaceDialog>
     </div>
   );
