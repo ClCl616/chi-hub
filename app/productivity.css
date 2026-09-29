@@ -443,38 +443,13 @@ kbd {
   }
 }
 
-/* Note actions share the same commands for right-click and touch. */
+/* Card context menus also support touch long press. */
 .note-card {
   position: relative;
   min-width: 0;
 }
 .note-card .note-tile {
   width: 100%;
-}
-.note-gallery.grid .note-card .note-paper {
-  padding-top: 42px;
-}
-.note-more {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-}
-.note-more:hover,
-.note-more[data-popup-open] {
-  background: #eef3df;
-}
-.note-gallery.list .note-card .note-tile {
-  padding-right: 46px;
-}
-.note-gallery.list .note-more {
-  top: 24px;
 }
 .note-actions-menu {
   min-width: 160px;
@@ -550,15 +525,8 @@ kbd {
   margin-bottom: 0;
 }
 @media (max-width: 820px) {
-  .note-more {
-    width: 40px;
-    height: 40px;
-  }
   .note-actions-menu [role='menuitem'] {
     min-height: 44px;
-  }
-  .note-gallery.grid .note-card .note-paper {
-    padding-top: 48px;
   }
   .settings-card {
     padding: 18px;
@@ -566,5 +534,134 @@ kbd {
   .settings-card .shortcut-guide > div {
     flex-wrap: wrap;
     gap: 10px;
+  }
+}
+
+.note-paper {
+  position: relative;
+}
+.note-pin {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  color: #526620;
+  background: #eef5d8;
+  box-shadow: 0 2px 6px #17191620;
+}
+.note-paper:has(.note-pin):not(.drawing) {
+  padding-top: 42px;
+}
+.note-gallery.list .note-pin {
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+}
+.meal-periods.all-periods {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+.meal-periods.single-period {
+  grid-template-columns: minmax(0, 1fr);
+}
+.meal-period {
+  min-width: 0;
+}
+.meal-period .meal-card-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.meal-period-heading {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.meal-period-heading h3 span {
+  display: block;
+  margin: 4px 0 0;
+}
+.meal-period-heading > small {
+  font-size: 11px;
+}
+.meal-period .meal-card header span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.meal-period .meal-card li {
+  overflow-wrap: anywhere;
+}
+.meal-period.other {
+  grid-column: 1 / -1;
+}
+.drive-items.grid {
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 30px 22px;
+}
+.drive-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.drive-item:focus-within {
+  background: transparent;
+}
+.drive-file-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  width: 100%;
+  border-radius: 12px;
+}
+.drive-items.grid .drive-thumbnail {
+  height: auto;
+  aspect-ratio: 4 / 5;
+  margin: 0;
+  border: 1px solid #eeeee8;
+  border-radius: 12px;
+  box-shadow: 0 5px 14px #1821100d;
+}
+.drive-file-info {
+  padding: 0;
+}
+.drive-file-info small {
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.drive-items.list .drive-item {
+  display: block;
+  padding: 12px 0;
+}
+.drive-items.list .drive-file-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+.drive-items.list .drive-thumbnail {
+  width: 56px;
+  height: 65px;
+}
+.drive-items.list .drive-thumbnail svg {
+  width: 26px;
+}
+.drive-file-card:hover .drive-thumbnail,
+.drive-item[data-popup-open] .drive-thumbnail {
+  border-color: #a6b881;
+  box-shadow: 0 4px 14px #00000012;
+}
+@media (max-width: 820px) {
+  .meal-periods.all-periods {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .drive-items.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 14px;
   }
 }

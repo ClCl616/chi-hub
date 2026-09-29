@@ -106,7 +106,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 - `app/page.tsx`, AppShell/DashboardWorkspace, `components/layout/desktop-navigation.tsx`, `mobile-navigation.tsx`.
 - CSS 순서: globals → dashboard → workspace → desktop → mobile → enhancements → productivity. 820px 기준 전용 메뉴/화면, 중간 태블릿 폭 보정. 복습·학식 구분·키보드 스타일은 `app/productivity.css`.
-- 탭 쿼리: `?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals`. 기본 focus, 뒤로 가기/기존 개별 경로 redirect, 로그인 복귀 시 쿼리/해시 보존.
+- 탭 쿼리: `?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|settings`. 기본 focus, 뒤로 가기/기존 개별 경로 redirect, 로그인 복귀 시 쿼리/해시 보존.
 - 요약은 API 변경 이벤트로 갱신, 조회 실패는 0 대신 대시. 사이드바 상태 키는 `chi-hub-sidebar`.
 
 ### 캘린더
@@ -125,7 +125,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 - 800ms 자동 저장, Ctrl/⌘+S, 저장 요청 직렬화. 새 메모 UUID 재사용/POST upsert로 재시도 중복 방지. 제목 변경 PATCH 응답을 목록에 즉시 반영한다.
 - 목록 복귀/다른 메모 열기 전 저장 완료 확인, 미저장 시 이탈 경고. 50,000자 초과 저장은 절단 대신 오류 반환.
 - 삭제는 `deleted_at` 기반 휴지통 이동. 메모 탭 휴지통에서 내용/필기를 확인하고 30일 이내 복원한다. DB trigger와 활성 항목 API 필터가 삭제 후 자동 저장 및 만료 복원을 차단한다. worker의 `purge_expired_notes`가 만료 메모를 정리한다. 이 기능 적용 전에 이미 영구 삭제된 메모는 복구할 수 없다.
-- `components/note-card.tsx`: 메모 우클릭 또는 더보기(···) 메뉴에서 열기/삭제, 휴지통에서는 내용 보기/복원. 삭제는 확인 팝업 없이 30일 휴지통으로 이동한다. 편집기 삭제 확인 팝업은 유지한다. 클릭한 메모 ID로 처리하고 요청 실패 시 목록을 유지하며 오류를 표시한다. 동시 삭제/복원 요청을 막는다.
+- `components/note-card.tsx`: 메모 우클릭 메뉴에서 열기/삭제, 휴지통에서는 내용 보기/복원. 더보기와 편집기의 삭제 버튼은 사용자 요청으로 제거했다. 삭제는 카드 우클릭 메뉴에서 확인 팝업 없이 30일 휴지통으로 이동한다. 터치에서는 길게 눌러 메뉴를 연다. 고정 표시는 미리보기 내부 좌측 상단에 겹쳐 표시한다. 클릭한 메모 ID로 처리하고 요청 실패 시 목록을 유지하며 오류를 표시한다. 동시 삭제/복원 요청을 막는다.
 
 ### 복습 / 학습
 
@@ -139,11 +139,12 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 - `components/workspace-shortcuts.tsx`: Ctrl+K 작업 검색·전환, F1 설정 탭, Alt+1~9 기존 기능 탭 이동, Ctrl+Shift+F 현재 화면 검색, Alt+N 새 항목/드라이브 추가 메뉴. 메모 Ctrl+S와 팝업 Esc 유지.
 - `components/settings-workspace.tsx`: 마우스/단축키 사용 안내를 모은 설정 탭(`?view=settings`). PC 사이드바와 모바일 전체 메뉴에서 접근한다. 화면 제목 옆 단축키 버튼, 사이드바 단축키 툴팁, 메모 편집기 저장 단축키 문구는 제거했다. 설정은 열 번째 탭이지만 Alt+10은 정의하지 않는다.
 - 한글 조합 중, AltGr, 반복 키, 팝업/메뉴에서는 전역 단축키를 무시한다. 입력 요소에서는 Alt 작업 이동을 가로채지 않는다. 기존 브라우저 뒤로 가기와 마우스 뒤로 버튼은 쿼리 기반 작업 이동에 적용된다.
-- 드라이브 폴더 버튼에서 F2 이름 변경·Delete 휴지통, 파일 다운로드 링크에서 Enter 다운로드·Delete 휴지통. 키보드 포커스 강조, 마우스 hover, Segoe UI/Malgun Gothic 폴백, 고대비·모션 감소 환경을 지원한다. 네이티브 Windows 앱으로 변환한 것은 아니다.
+- 드라이브 폴더 버튼에서 F2 이름 변경·Delete 휴지통, 파일 카드에서 Enter 다운로드, 삭제는 우클릭 메뉴로 수행한다. 키보드 포커스 강조, 마우스 hover, Segoe UI/Malgun Gothic 폴백, 고대비·모션 감소 환경을 지원한다. 네이티브 Windows 앱으로 변환한 것은 아니다.
 
 ### 드라이브 / 휴지통
 
 - `components/files-workspace.tsx`, `app/api/files/route.ts`, `app/api/folders/route.ts`.
+- `components/drive-file-card.tsx`: 메모와 같은 세로 미리보기 카드, 하단 파일명·용량·날짜. 상시 작업 버튼 없이 우클릭(터치 길게 누르기) 메뉴로 다운로드/폴더 이동/삭제, 휴지통에서 복원한다. 파일명 보존 다운로드 경로와 만료 복원 차단은 유지한다. 폴더 조작 UI는 기존과 같다.
 - ‘추가’ 버튼 위치에 열리는 메뉴로 파일/폴더 추가. 중첩 폴더 생성·경로 탐색·이름 변경·파일 이동. 기존 파일은 folder_id=null인 루트에 유지.
 - 현재 폴더에 파일 업로드/드래그앤드롭, 검색/유형/정렬/격자·목록, 파일당 500 MiB. private-files 비공개 bucket/사용자 경로 정책 유지. 파일 목록은 4분마다 갱신.
 - 이미지 미리보기 서명 URL은 5분. 다운로드는 `/api/files/download?id=...`에서 로그인/소유권/휴지통 상태 확인 후 새 60초 Storage 서명을 발급하고 스트리밍한다. `Content-Disposition`의 UTF-8 filename*로 한글·공백 포함 원본 파일명을 보존하고 브라우저 전체 파일 메모리 적재를 피한다. 다운로드 트래픽은 Windows 앱을 경유한다.
@@ -157,7 +158,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 - 집중/휴식 타이머는 `chi-hub-focus-timer-v2` 종료 시각으로 새로고침/백그라운드 복원. 완료 팝업은 body portal이라 숨겨진 탭에서도 표시.
 - 루틴의 일간/요일 반복 및 날짜별 daily_tasks, 수면 시작/종료/직접 기록(진행 기록은 사용자당 하나), 운동 기록/최근 7일 요약 유지.
 - 학식은 대전대 공식 HTML에서 혜화문화관/제2생활관/HRC 파싱. 기존 cbnu/hufs 저장 선택도 dju로 복원. 타 학교 서버 코드는 남아 있지만 UI 복원 금지. 브라우저 5분/서버 30분/stale 24시간 cache, 외부 HTML 변경에 취약.
-- 학식은 조식/중식/석식별 제목·아이콘·테두리와 식사 필터로 구분한다. 아침/점심/저녁 별칭도 인식하며 복합/미분류 표기는 원문을 유지해 기타 식사로 표시한다. 없는 식사는 미공개 안내를 보여준다.
+- 학식은 PC에서 조식 | 중식 | 석식 세 열을 나란히 놓고 식당별 메뉴를 각 열에 세로로 쌓는다. 모바일(820px 이하)은 한 열로 전환한다. 제목·아이콘·테두리와 식사 필터를 유지한다. 아침/점심/저녁 별칭도 인식하며 복합/미분류 표기는 원문을 유지해 기타 식사로 표시한다. 없는 식사는 미공개 안내를 보여준다.
 
 ## DB 변경 이력과 주의점
 
@@ -227,6 +228,11 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 복잡한 원격 PowerShell은 UTF-16LE Base64 `-EncodedCommand`로 전달하면 중첩 인용 문제를 줄일 수 있다. `work/`의 이전 임시 배포/키 설정 스크립트는 bundle에 없으며 새 PC 필수 도구로 취급하지 않는다.
 
 ## 검증 완료 / 남은 확인 사항
+
+### 2026-09-29 카드 배치 / 우클릭 통일
+
+- 학식 세 열, 메모 더보기/편집기 삭제 버튼 제거, 미리보기 왼쪽 위 고정 표시, 드라이브 파일 카드와 우클릭 메뉴를 구현했다. DB/API/의존성 변경 없음. 타입 검사, 변경 파일 lint, production build/HTTP smoke 통과.
+- mock Edge: 메모 고정 위치·삭제 버튼 제거, 파일 우클릭 삭제/실패 복구/복원/폴더 이동/원본 파일명 다운로드, 메모·파일 실제 touch 길게 누르기, 파일 목록 보기 메뉴, 학식 세 열 정렬, 기존 기능 및 10화면 × 5너비 회귀 검사 통과. PC·모바일 캡처 확인. 로컬 검증 완료, 운영 배포 대기.
 
 ### 2026-09-29 우클릭 / 설정 탭 보완
 

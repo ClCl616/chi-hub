@@ -50,7 +50,6 @@ export function NotesWorkspace() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [raw, setRaw] = useState(false);
   const [preview, setPreview] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const mutationPending = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
@@ -125,7 +124,6 @@ export function NotesWorkspace() {
         editor.reset();
         setEditing(false);
       }
-      setDeleteOpen(false);
       setNotice('휴지통으로 이동했습니다. 30일 동안 복원할 수 있습니다.');
       void trashNotes.refresh();
     } catch (reason) {
@@ -360,14 +358,6 @@ export function NotesWorkspace() {
               저장
             </button>
             <output aria-live="polite">{status}</output>
-            {draft.id && (
-              <button
-                aria-label="메모 삭제"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
           </header>
           {draft.content_type === 'markdown' && (
             <div className="markdown-toolbar">
@@ -449,28 +439,6 @@ export function NotesWorkspace() {
           </div>
         </section>
       )}
-      <WorkspaceDialog
-        open={deleteOpen}
-        onOpenChange={(value) => {
-          if (!deleting) setDeleteOpen(value);
-        }}
-        title="메모를 휴지통으로 이동할까요?"
-        description="30일 동안 복원할 수 있으며, 이후 자동으로 영구 삭제됩니다."
-      >
-        <div className="dialog-actions">
-          <button onClick={() => setDeleteOpen(false)} disabled={deleting}>
-            취소
-          </button>
-          <button
-            className="danger"
-            onClick={() => void remove()}
-            disabled={deleting}
-          >
-            {deleting ? '이동 중…' : '휴지통으로 이동'}
-          </button>
-        </div>
-        {error && <p role="alert">{error}</p>}
-      </WorkspaceDialog>
       <WorkspaceDialog
         open={!!trashedNote}
         onOpenChange={(value) => {

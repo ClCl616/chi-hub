@@ -19,6 +19,7 @@ const browser = await chromium.launch({
 const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
   serviceWorkers: 'block',
+  hasTouch: true,
 });
 const page = await context.newPage();
 const errors = [];
@@ -33,7 +34,7 @@ let notes = [
     id: '11111111-1111-4111-8111-111111111111',
     title: '기존 제목',
     content: '# 테스트 문서\n\n기존 내용',
-    pinned: false,
+    pinned: true,
     category: '개인',
     content_type: 'markdown',
     created_at: date,
@@ -86,6 +87,30 @@ await once(downloadServer, 'listening');
 const downloadBase = `http://127.0.0.1:${downloadServer.address().port}`;
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const fileCard = (name) =>
+  page.locator('.drive-item').filter({ hasText: name });
+async function fileAction(name, action) {
+  await fileCard(name).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: action, exact: true }).click();
+}
+async function longPress(locator) {
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  const session = await context.newCDPSession(page);
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [
+      { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 60) },
+    ],
+  });
+  await pause(850);
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  });
+  await session.detach();
+}
+
 await context.route('**/api/**', async (route) => {
   const request = route.request(),
     url = new URL(request.url()),
@@ -329,6 +354,17 @@ try {
   await page.getByRole('button', { name: '메모 목록으로' }).click();
   await page.locator('.note-tile').filter({ hasText: '변경된 제목' }).waitFor();
   assert.equal(notes.length, 1, 'Rename does not create a new note');
+  const pin = page.locator('.note-pin');
+  const pinBox = await pin.boundingBox();
+  const previewBox = await page.locator('.note-paper').first().boundingBox();
+  assert.ok(
+    pinBox.x >= previewBox.x &&
+      pinBox.x < previewBox.x + 20 &&
+      pinBox.y >= previewBox.y &&
+      pinBox.y < previewBox.y + 20,
+    'Pin overlays top-left of preview',
+  );
+  await page.screenshot({ path: 'work/qa/note-pin.png', fullPage: true });
   await page.getByRole('button', { name: '메모 작성' }).click();
   await page.getByLabel('메모 제목', { exact: true }).fill('저장 경합 테스트');
   await page
@@ -429,30 +465,22 @@ try {
     fullPage: true,
   });
   await page.getByRole('tab', { name: '드라이브', exact: true }).click();
-  await page
-    .getByRole('button', { name: '검증 문서.txt 휴지통으로 이동' })
-    .click();
+  await fileAction('검증 문서.txt', '삭제');
   await page
     .getByText('휴지통으로 이동했습니다. 30일 동안 복원할 수 있습니다.')
     .waitFor();
   await page.getByRole('button', { name: '휴지통', exact: true }).click();
-  await page.getByRole('button', { name: '검증 문서.txt 복원' }).click();
+  await fileAction('검증 문서.txt', '복원');
   await page.getByText('파일을 복원했습니다.').waitFor();
   await page
     .getByRole('button', { name: '내 드라이브', exact: true })
     .first()
     .click();
-  await page
-    .getByRole('button', { name: '검증 문서.txt 휴지통으로 이동' })
-    .waitFor();
+  await fileCard('검증 문서.txt').waitFor();
   failNextDelete = true;
-  await page
-    .getByRole('button', { name: '검증 문서.txt 휴지통으로 이동' })
-    .click();
+  await fileAction('검증 문서.txt', '삭제');
   await page.getByText('테스트 이동 실패').waitFor();
-  await page
-    .getByRole('button', { name: '검증 문서.txt 휴지통으로 이동' })
-    .waitFor();
+  await fileCard('검증 문서.txt').waitFor();
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer();
     data.items.add(new File(['test'], 'drop-test.txt', { type: 'text/plain' }));
@@ -483,22 +511,36 @@ try {
     .getByRole('button', { name: '내 드라이브', exact: true })
     .first()
     .click();
-  await page
-    .getByRole('button', { name: '검증 문서.txt 이동', exact: true })
-    .click();
+  await fileAction('검증 문서.txt', '이동');
   await page
     .getByLabel('이동할 폴더', { exact: true })
     .selectOption(folders[0].id);
   await page.getByRole('button', { name: '이동', exact: true }).click();
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: '자료', exact: true }).click();
-  await page
-    .getByRole('button', { name: '검증 문서.txt 이동', exact: true })
-    .waitFor();
+  await fileCard('검증 문서.txt').waitFor();
   await page.screenshot({ path: 'work/qa/drive-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await pause(350);
   await page.screenshot({ path: 'work/qa/drive-mobile.png', fullPage: true });
+  await longPress(fileCard('검증 문서.txt'));
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).waitFor();
+  await page.screenshot({
+    path: 'work/qa/drive-context-mobile.png',
+    fullPage: true,
+  });
+  await page.keyboard.press('Escape');
+  await page.getByRole('menu').waitFor({ state: 'hidden' });
+  await page
+    .getByRole('button', { name: '파일 목록 보기', exact: true })
+    .click();
+  await fileCard('검증 문서.txt').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: '다운로드', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.getByRole('menu').waitFor({ state: 'hidden' });
+  await page
+    .getByRole('button', { name: '파일 격자 보기', exact: true })
+    .click();
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -549,12 +591,20 @@ try {
   await page.goto(base + '/?view=notes');
   const savedNote = notes[0];
   await page.locator('.note-tile').filter({ hasText: savedNote.title }).click();
-  await page.getByRole('button', { name: '메모 삭제', exact: true }).click();
+  assert.equal(
+    await page.getByRole('button', { name: '메모 삭제', exact: true }).count(),
+    0,
+  );
+  await page.getByRole('button', { name: '메모 목록으로' }).click();
   await page
-    .getByRole('dialog')
-    .getByRole('button', { name: '휴지통으로 이동', exact: true })
-    .click();
-  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+    .locator('.note-tile')
+    .filter({ hasText: savedNote.title })
+    .click({ button: 'right' });
+  await page.getByRole('menuitem', { name: '삭제', exact: true }).click();
+  await page
+    .locator('.note-tile')
+    .filter({ hasText: savedNote.title })
+    .waitFor({ state: 'hidden' });
   assert.ok(notes.find((item) => item.id === savedNote.id).deleted_at);
   await page
     .locator('.notes-categories')
@@ -647,9 +697,8 @@ try {
     .click();
   await page.setViewportSize({ width: 390, height: 844 });
   await pause(350);
-  await page
-    .getByRole('button', { name: `${contextNote.title} 메뉴`, exact: true })
-    .click();
+  assert.equal(await page.locator('.note-more').count(), 0);
+  await longPress(contextTile);
   await page.getByRole('menuitem', { name: '삭제', exact: true }).waitFor();
   await page.screenshot({
     path: 'work/qa/notes-menu-mobile.png',
@@ -777,6 +826,17 @@ try {
   await page.keyboard.press('Alt+9');
   await page.getByRole('region', { name: '중식 식단' }).waitFor();
   assert.equal(await page.locator('.meal-period').count(), 3);
+  const mealBoxes = await page.locator('.meal-period').evaluateAll((elements) =>
+    elements.map((el) => ({
+      x: el.getBoundingClientRect().x,
+      y: el.getBoundingClientRect().y,
+    })),
+  );
+  assert.ok(mealBoxes[0].x < mealBoxes[1].x && mealBoxes[1].x < mealBoxes[2].x);
+  assert.ok(
+    mealBoxes.every((box) => Math.abs(box.y - mealBoxes[0].y) < 2),
+    'Breakfast, lunch and dinner align in three columns',
+  );
   await page.getByRole('button', { name: '석식', exact: true }).click();
   assert.equal(await page.locator('.meal-period').count(), 1);
   await page.getByRole('region', { name: '석식 식단' }).waitFor();
@@ -808,8 +868,21 @@ try {
   await link.evaluate((element, fixtureBase) => {
     element.href = fixtureBase + '/download' + new URL(element.href).search;
   }, downloadBase);
+  await link.click({ button: 'right' });
+  const menuDownload = page.getByRole('menuitem', {
+    name: '다운로드',
+    exact: true,
+  });
+  assert.equal(await menuDownload.getAttribute('download'), expectedName);
+  assert.match(
+    await menuDownload.getAttribute('href'),
+    /^\/api\/files\/download\?id=/,
+  );
+  await menuDownload.evaluate((element, fixtureBase) => {
+    element.href = fixtureBase + '/download' + new URL(element.href).search;
+  }, downloadBase);
   const downloadEvent = page.waitForEvent('download');
-  await link.click();
+  await menuDownload.click();
   const download = await downloadEvent;
   assert.equal(
     download.suggestedFilename(),
@@ -821,11 +894,10 @@ try {
     await readFile(await download.path(), 'utf8'),
     'download verification',
   );
-  await link.focus();
-  await page.keyboard.press('Delete');
+  await fileAction(expectedName, '삭제');
   await waitFor(
     () => Boolean(files.find((item) => item.name === expectedName)?.deleted_at),
-    'Delete on download link moves file to trash',
+    'File context menu moves file to trash',
   );
   const folderButton = page.getByRole('button', { name: '자료', exact: true });
   await folderButton.focus();

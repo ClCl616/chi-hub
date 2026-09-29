@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { BookOpen, MoreHorizontal, Pin, RotateCcw, Trash2 } from 'lucide-react';
+import { BookOpen, Pin, RotateCcw, Trash2 } from 'lucide-react';
 import type { Note } from '@/hooks/use-note-editor';
 import {
   ContextMenu,
@@ -9,12 +9,6 @@ import {
   ContextMenuContent,
   ContextMenuItem,
 } from '@/components/ui/context-menu';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 
 export function NoteCard({
   note,
@@ -55,6 +49,12 @@ export function NoteCard({
       <ContextMenuTrigger className="note-card">
         <button className="note-tile" onClick={onOpen} disabled={busy}>
           <div className={`note-paper ${note.content_type}`}>
+            {note.pinned && (
+              <span className="note-pin" title="고정된 메모">
+                <Pin size={15} fill="currentColor" aria-hidden="true" />
+                <span className="sr-only">고정된 메모</span>
+              </span>
+            )}
             {note.content_type === 'drawing' ? (
               <Image
                 src={note.content}
@@ -70,9 +70,7 @@ export function NoteCard({
               </>
             )}
           </div>
-          <strong>
-            {note.pinned && <Pin size={13} />} {title}
-          </strong>
+          <strong>{title}</strong>
           <small>
             {trash ? '삭제일' : note.category} ·{' '}
             {new Date(note.deleted_at || note.updated_at).toLocaleDateString(
@@ -80,30 +78,6 @@ export function NoteCard({
             )}
           </small>
         </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="note-more"
-            aria-label={`${title} 메뉴`}
-            disabled={busy}
-          >
-            <MoreHorizontal size={18} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="note-actions-menu" align="end">
-            {actions.map(
-              ({ label, icon: Icon, run, disabled, destructive }) => (
-                <DropdownMenuItem
-                  key={label}
-                  onClick={run}
-                  disabled={disabled}
-                  variant={destructive ? 'destructive' : 'default'}
-                >
-                  <Icon size={16} />
-                  {label}
-                </DropdownMenuItem>
-              ),
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </ContextMenuTrigger>
       <ContextMenuContent className="note-actions-menu">
         {actions.map(({ label, icon: Icon, run, disabled, destructive }) => (

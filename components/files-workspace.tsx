@@ -1,16 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import { DriveFileCard, type StoredFile } from '@/components/drive-file-card';
 import {
   Plus,
   FolderPlus,
   MoreHorizontal,
   Pencil,
-  FolderInput,
   ChevronRight,
-  Download,
-  File as FileIcon,
   FolderOpen,
   Grid2X2,
   HardDrive,
@@ -37,24 +34,6 @@ type DriveFolder = {
   deleted_at: string | null;
   trash_root_id: string | null;
 };
-type StoredFile = {
-  folder_id: string | null;
-  trash_root_id: string | null;
-  id: string;
-  name: string;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-  deleted_at: string | null;
-  purge_started_at: string | null;
-  url: string | null;
-};
-const sizeLabel = (bytes: number | null) =>
-  !bytes
-    ? '0 KB'
-    : bytes < 1048576
-      ? `${Math.ceil(bytes / 1024)} KB`
-      : `${(bytes / 1048576).toFixed(1)} MB`;
 export function FilesWorkspace() {
   const [folder, setFolder] = useState<string | null>(null);
   const folders = useApi<{ folders: DriveFolder[] }>('/api/folders');
@@ -579,98 +558,21 @@ export function FilesWorkspace() {
           </div>
         )}
         <div className={`drive-items ${view}`}>
-          {files.map((item) => {
-            const expires = item.deleted_at
-              ? new Date(new Date(item.deleted_at).getTime() + 30 * 86400000)
-              : null;
-            const expired = Boolean(
-              item.purge_started_at || (expires && expires.getTime() <= now),
-            );
-            return (
-              <article className="drive-item" key={item.id}>
-                <div className="drive-thumbnail">
-                  {item.mime_type?.startsWith('image/') && item.url ? (
-                    <Image
-                      src={item.url}
-                      alt=""
-                      width={240}
-                      height={160}
-                      unoptimized
-                    />
-                  ) : (
-                    <FileIcon size={view === 'grid' ? 48 : 23} />
-                  )}
-                </div>
-                <div className="drive-file-info">
-                  <strong title={item.name}>{item.name}</strong>
-                  <small>
-                    {sizeLabel(item.size_bytes)} ·{' '}
-                    {expires
-                      ? expired
-                        ? '영구 삭제 대기'
-                        : `${expires.toLocaleDateString('ko-KR')} 삭제 예정`
-                      : new Date(item.created_at).toLocaleDateString('ko-KR')}
-                  </small>
-                </div>
-                <div className="drive-item-actions">
-                  {!trash && (
-                    <button
-                      aria-label={item.name + ' 이동'}
-                      disabled={busy || folderBusy}
-                      onClick={() => {
-                        setMoving(item);
-                        setDestination(folder ?? '');
-                        setFolderError('');
-                      }}
-                    >
-                      <FolderInput size={17} />
-                    </button>
-                  )}
-                  {trash ? (
-                    <button
-                      aria-label={`${item.name} 복원`}
-                      disabled={expired}
-                      onClick={() => void move(item)}
-                    >
-                      <RotateCcw size={17} />
-                      <span>복원</span>
-                    </button>
-                  ) : (
-                    <>
-                      <a
-                        aria-label={`${item.name} 다운로드`}
-                        title="원래 파일명으로 다운로드"
-                        href={`/api/files/download?id=${encodeURIComponent(item.id)}`}
-                        download={item.name}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === 'Delete' &&
-                            !event.nativeEvent.isComposing &&
-                            !event.repeat &&
-                            !event.ctrlKey &&
-                            !event.altKey &&
-                            !event.metaKey &&
-                            !event.shiftKey
-                          ) {
-                            event.preventDefault();
-                            void move(item);
-                          }
-                        }}
-                      >
-                        <Download size={17} />
-                      </a>
-                      <button
-                        aria-label={`${item.name} 휴지통으로 이동`}
-                        onClick={() => void move(item)}
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+          {files.map((item) => (
+            <DriveFileCard
+              key={item.id}
+              item={item}
+              trash={trash}
+              busy={busy || folderBusy || pending.includes(item.id)}
+              now={now}
+              onTrash={() => void move(item)}
+              onMove={() => {
+                setMoving(item);
+                setDestination(folder ?? '');
+                setFolderError('');
+              }}
+            />
+          ))}
         </div>
         {!records.loading &&
           !records.error &&

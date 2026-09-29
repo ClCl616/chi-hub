@@ -169,7 +169,9 @@ export function MealsWorkspace() {
                 )}
               </section>
               {visibleMeals.length ? (
-                <div className="meal-periods">
+                <div
+                  className={`meal-periods ${period === 'all' ? 'all-periods' : 'single-period'}`}
+                >
                   {mealPeriods
                     .filter((item) => period === 'all' || period === item.id)
                     .map((item) => {
