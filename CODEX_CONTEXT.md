@@ -71,12 +71,12 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 ## 현재 운영 상태와 환경 구분
 
-2026-09-29 확장의 로컬 구현/검증 및 DB migration 적용을 완료했다. Windows 배포 준비 중이며 아래 릴리스는 배포 전 확인한 운영 상태다. 서버 소스 `4238593`은 clean이며 GitHub 원격 추적 값이 오래되어 ahead 15로 표시되지만 실제 HEAD는 개발 PC의 작업 시작점과 같다.
+2026-09-29 확장 `eb13304`의 로컬 검증·DB migration·Windows 배포를 완료했다. 설치 과정에서 발견한 간접 의존성 fast-uri 보안 패치의 추가 검증/서버 전달을 진행 중이다. GitHub는 마지막 승인된 `4238593` 상태를 유지한다.
 
 | 항목 | 현재 상태 |
 | --- | --- |
-| 기능 빌드 | `c695539` |
-| 실행 릴리스 | `C:/Services/chi-hub-runtime/releases/20260922-191648-828-c69553950b99` |
+| 기능 빌드 | `eb13304` |
+| 실행 릴리스 | `C:/Services/chi-hub-runtime/releases/20260929-163538-917-eb133046211a` |
 | 서버 소스 | `C:/Services/chi-hub` |
 | 앱 | CHI-HUB-App, LOCAL SERVICE, Running, `127.0.0.1:3000` health 정상 |
 | HTTPS | CHI-HUB-Caddy 서비스 Running, Caddy 2.11.4 |
@@ -97,6 +97,8 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 ## 코드 구조와 구현 완료 내용
 
 스택: React/React DOM/RSC 19.2.8, Vinext 1.0.0-beta.10, Vite 8.3.0, TypeScript 5.9.3, Tailwind 4, Base UI 1.7.0, Supabase JS/SSR. Tiptap 패키지는 3.31.3 고정, 읽기는 react-markdown 10.1.0/remark-gfm 4.0.1. 브라우저 회귀 검사는 Playwright 1.62.1.
+
+- 2026-09-29 의존성 감사에서 `shadcn → @modelcontextprotocol/sdk → ajv → fast-uri`의 취약점 1건이 확인돼 잠금파일의 fast-uri만 3.1.6→3.1.8로 갱신했다. 앱 소스/standalone에서 이 패키지 참조는 확인되지 않았다. 로컬 npm audit는 0건이며 [공식 보안 안내](https://github.com/advisories/GHSA-qw65-cvwx-89v3)의 수정 범위에 해당한다.
 
 ### 공통 셸과 반응형
 
@@ -249,7 +251,7 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 6. 기존 routines 린트 2건, 복잡한 Markdown 호환성, 큰 client chunk, 공인 IP/DNS 변경 대응, 로그/릴리스 보관 정책은 후속 개선 후보다.
 7. 모바일은 PWA이며 네이티브 모바일/워치 앱은 아직 만들지 않았다. 관련 보안·확장 안내는 `docs/SECURITY_AND_APPS.md`.
 
-2026-09-29 확장은 Windows 배포 준비 중이다. 위 후속 후보는 사용자가 요청하지 않은 새 개발 목표로 자동 확대하지 않는다.
+2026-09-29 기능 확장은 배포됐으며 간접 의존성 보안 패치의 서버 전달을 마무리 중이다. 위 후속 후보는 사용자가 요청하지 않은 새 개발 목표로 자동 확대하지 않는다.
 
 ## 최근 핵심 이력
 
