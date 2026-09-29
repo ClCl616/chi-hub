@@ -50,6 +50,8 @@ try {
   assert.equal((await fetch(`${base}/api/files`)).status, 401);
   for (const path of [
     '/api/study',
+    '/api/preferences',
+    '/api/profile',
     '/api/notes?trash=true',
     '/api/files/download?id=11111111-1111-4111-8111-111111111111',
   ]) {
@@ -59,6 +61,18 @@ try {
       path + ' requires authentication',
     );
   }
+  for (const path of ['/api/preferences', '/api/profile'])
+    assert.equal(
+      (
+        await fetch(base + path, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        })
+      ).status,
+      401,
+      path + ' mutation requires authentication',
+    );
   const oldRoute = await fetch(`${base}/meals`, { redirect: 'manual' });
   assert.ok([301, 302, 307, 308].includes(oldRoute.status));
   assert.ok(oldRoute.headers.get('location')?.endsWith('/?view=meals'));

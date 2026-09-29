@@ -1,6 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useWorkspacePreferences } from '@/hooks/use-workspace-preferences';
+import { useCardDrag } from '@/hooks/use-card-drag';
+import {
+  fileDragType,
+  orderRank,
+  reorderIds,
+} from '@/lib/workspace-preferences';
 import { DriveFileCard, type StoredFile } from '@/components/drive-file-card';
 import {
   Plus,
@@ -70,7 +77,17 @@ export function FilesWorkspace() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('all');
-  const [sort, setSort] = useState('newest');
+  const [sort, setSort] = useState('manual');
+  const prefs = useWorkspacePreferences();
+  const drag = useCardDrag(
+    fileDragType,
+    trash ||
+      busy ||
+      folderBusy ||
+      pending.length > 0 ||
+      prefs.saving ||
+      !prefs.ready,
+  );
   async function upload(files: File[]) {
     if (uploading.current || !files.length) return;
     uploading.current = true;
@@ -153,11 +170,15 @@ export function FilesWorkspace() {
                 !file.mime_type?.startsWith('video/'))),
     )
     .sort((a, b) =>
-      sort === 'name'
-        ? a.name.localeCompare(b.name, 'ko')
-        : sort === 'size'
-          ? (b.size_bytes ?? 0) - (a.size_bytes ?? 0)
-          : b.created_at.localeCompare(a.created_at),
+      sort === 'manual'
+        ? orderRank(prefs.preferences.fileOrder, a.id) -
+            orderRank(prefs.preferences.fileOrder, b.id) ||
+          b.created_at.localeCompare(a.created_at)
+        : sort === 'name'
+          ? a.name.localeCompare(b.name, 'ko')
+          : sort === 'size'
+            ? (b.size_bytes ?? 0) - (a.size_bytes ?? 0)
+            : b.created_at.localeCompare(a.created_at),
     );
   const allFolders = folders.data?.folders ?? [];
   const shownFolders = allFolders
@@ -233,8 +254,8 @@ export function FilesWorkspace() {
       setFolderBusy(false);
     }
   }
-  async function moveFile() {
-    if (!moving) return;
+  async function moveFile(item = moving, destinationId = destination) {
+    if (!item || folderBusy) return;
     setFolderBusy(true);
     setFolderError('');
     try {
@@ -242,19 +263,43 @@ export function FilesWorkspace() {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          id: moving.id,
+          id: item.id,
           action: 'move',
-          folder_id: destination || null,
+          folder_id: destinationId || null,
         }),
       });
       await records.refresh();
       setMoving(null);
       setMessage('파일을 이동했습니다.');
     } catch (e) {
-      setFolderError(e instanceof Error ? e.message : '이동하지 못했습니다.');
+      const message = e instanceof Error ? e.message : '이동하지 못했습니다.';
+      setFolderError(message);
+      setMessage(message);
     } finally {
       setFolderBusy(false);
     }
+  }
+  function dropFile(id: string, destinationId: string | null) {
+    const item = records.data?.files.find((item) => item.id === id);
+    if (item && (item.folder_id ?? null) !== destinationId)
+      void moveFile(item, destinationId ?? '');
+  }
+  async function reorder(source: string, target: string) {
+    if (source === target) return;
+    const previousSort = sort;
+    setSort('manual');
+    if (
+      !(await prefs.savePreference(
+        'fileOrder',
+        reorderIds(
+          prefs.preferences.fileOrder,
+          files.map((file) => file.id),
+          source,
+          target,
+        ),
+      ))
+    )
+      setSort(previousSort);
   }
   return (
     <div
@@ -318,6 +363,8 @@ export function FilesWorkspace() {
         <nav aria-label="드라이브 위치">
           <button
             disabled={pending.length > 0 || busy || folderBusy}
+            {...drag.dropZone('folder:root')}
+            onDrop={(event) => drag.drop(event, (id) => dropFile(id, null))}
             className={!trash ? 'active' : ''}
             onClick={() => {
               setTrash(false);
@@ -379,6 +426,8 @@ export function FilesWorkspace() {
         {!trash && (
           <nav className="drive-breadcrumbs" aria-label="폴더 경로">
             <button
+              {...drag.dropZone('folder:root')}
+              onDrop={(event) => drag.drop(event, (id) => dropFile(id, null))}
               disabled={busy || folderBusy}
               onClick={() => {
                 setFolder(null);
@@ -391,6 +440,10 @@ export function FilesWorkspace() {
               <span key={item.id}>
                 <ChevronRight size={14} />
                 <button
+                  {...drag.dropZone(`folder:${item.id}`)}
+                  onDrop={(event) =>
+                    drag.drop(event, (id) => dropFile(id, item.id))
+                  }
                   disabled={busy || folderBusy}
                   onClick={() => {
                     setFolder(item.id);
@@ -428,6 +481,7 @@ export function FilesWorkspace() {
             value={sort}
             onChange={(event) => setSort(event.target.value)}
           >
+            <option value="manual">사용자 지정순</option>
             <option value="newest">최근 추가순</option>
             <option value="name">이름순</option>
             <option value="size">크기순</option>
@@ -436,7 +490,7 @@ export function FilesWorkspace() {
         <p className="drive-hint">
           {trash
             ? '휴지통으로 이동한 파일은 30일 후 자동으로 영구 삭제됩니다.'
-            : '파일을 이곳에 끌어다 놓으면 바로 업로드됩니다.'}
+            : '카드를 끌어 순서를 바꾸거나 폴더·상단 경로에 놓아 이동하세요. PC 파일을 놓으면 업로드됩니다.'}
         </p>
         <input
           ref={input}
@@ -447,6 +501,12 @@ export function FilesWorkspace() {
             void upload(Array.from(event.target.files ?? []))
           }
         />
+        {prefs.error && (
+          <p role="alert">
+            {prefs.error}
+            <button onClick={() => void prefs.refresh()}>다시 불러오기</button>
+          </p>
+        )}
         {message && (
           <output className="drive-message" aria-live="polite">
             {message}
@@ -478,6 +538,10 @@ export function FilesWorkspace() {
               <article key={item.id} className="drive-folder">
                 <button
                   className="folder-open"
+                  {...drag.dropZone(`folder:${item.id}`)}
+                  onDrop={(event) =>
+                    drag.drop(event, (id) => dropFile(id, item.id))
+                  }
                   title="Enter: 열기 · F2: 이름 변경 · Delete: 휴지통"
                   onKeyDown={(event) => {
                     if (
@@ -561,6 +625,12 @@ export function FilesWorkspace() {
           {files.map((item) => (
             <DriveFileCard
               key={item.id}
+              dragProps={{
+                ...drag.draggable(item.id),
+                ...drag.dropZone(`file:${item.id}`),
+                onDrop: (event) =>
+                  drag.drop(event, (id) => void reorder(id, item.id)),
+              }}
               item={item}
               trash={trash}
               busy={busy || folderBusy || pending.includes(item.id)}

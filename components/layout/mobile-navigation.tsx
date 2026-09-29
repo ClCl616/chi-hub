@@ -1,17 +1,15 @@
 'use client';
-import { LogOut, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { NavigationSections } from './navigation-sections';
 import type { NavigationProps } from './navigation-types';
 export function MobileHeader({
   navigation,
-  authState,
-  logout,
   activeView,
   selectView,
 }: NavigationProps) {
@@ -32,27 +30,12 @@ export function MobileHeader({
           <SheetContent className="mobile-menu" side="right">
             <SheetTitle className="mobile-menu-title">작업 선택</SheetTitle>
             <div className="mobile-menu-nav">
-              {navigation.map(({ id, label, icon: Icon }) => (
-                <SheetClose
-                  key={id}
-                  className={activeView === id ? 'active' : ''}
-                  onClick={() => selectView(id)}
-                  aria-pressed={activeView === id}
-                >
-                  <Icon size={19} />
-                  <span>{label}</span>
-                </SheetClose>
-              ))}
-            </div>
-            <div className="mobile-menu-footer">
-              {authState === 'ready' ? (
-                <button onClick={logout} type="button">
-                  <LogOut size={18} />
-                  로그아웃
-                </button>
-              ) : (
-                <a href="/login">로그인</a>
-              )}
+              <NavigationSections
+                navigation={navigation}
+                activeView={activeView}
+                selectView={selectView}
+                mobile
+              />
             </div>
           </SheetContent>
         </Sheet>

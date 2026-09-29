@@ -60,7 +60,7 @@ npm.cmd ci
 
 ## 프로젝트와 유지할 사용자 결정
 
-CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 복습/학습, 수면, 운동, 비공개 드라이브, 학식의 9개 기능과 마우스·키보드 사용 안내를 모은 설정 탭을 제공한다.
+CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 복습/학습, 수면, 운동, 비공개 드라이브, 학식의 9개 기능과 내 프로필·설정 탭을 제공한다.
 
 - 운영은 집의 Windows 서버, 공개 주소는 `https://chitoolbox.com`. Tailscale/SSH는 관리 전용이다. Sites에 게시하지 않는다. `.openai/hosting.json`은 과거 기록이다.
 - PC·모바일은 **같은 URL에서 전용 UI를 분리하고 데이터·저장 상태는 공유**한다. 밝은 배경/검정/라임, 기존 C 아이콘을 유지한다.
@@ -106,8 +106,17 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 - `app/page.tsx`, AppShell/DashboardWorkspace, `components/layout/desktop-navigation.tsx`, `mobile-navigation.tsx`.
 - CSS 순서: globals → dashboard → workspace → desktop → mobile → enhancements → productivity. 820px 기준 전용 메뉴/화면, 중간 태블릿 폭 보정. 복습·학식 구분·키보드 스타일은 `app/productivity.css`.
-- 탭 쿼리: `?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|settings`. 기본 focus, 뒤로 가기/기존 개별 경로 redirect, 로그인 복귀 시 쿼리/해시 보존.
+- 탭 쿼리: `?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|profile|settings`. 기본 focus, 뒤로 가기/기존 개별 경로 redirect, 로그인 복귀 시 쿼리/해시 보존.
 - 요약은 API 변경 이벤트로 갱신, 조회 실패는 0 대신 대시. 사이드바 상태 키는 `chi-hub-sidebar`.
+
+### 계정별 정리 / 프로필
+
+- `workspace_preferences`는 `(user_id,key)`별 배열을 저장한다. 즐겨찾기, 사용자 메모 폴더, 메모 순서, 파일 순서를 각각 저장하며 다른 설정 키를 덮어쓰지 않는다. RLS·명시적 권한으로 본인만 조회/삽입/수정, anon 및 직접 삭제는 허용하지 않는다.
+- `app/api/preferences/route.ts`, `hooks/use-workspace-preferences.tsx`, `lib/workspace-preferences.ts`. 키/값 검증과 UUID version 비교로 오래된 화면 저장은 409 처리한다. 낙관적 UI 실패 시 복구하고 서버 상태를 다시 읽는다. 계정에 저장되며 다른 기기는 재접속/새로고침 시 반영한다(실시간 구독 없음).
+- `hooks/use-card-drag.ts`: HTML drag/drop 전용 MIME과 실제 드래그 소스 검증. 메모는 기본 카테고리 또는 사용자 폴더로 드래그 이동, 파일은 폴더 버튼·경로·내 드라이브에 드롭해 이동. 카드에 드롭하면 사용자 지정 순서를 저장하며 검색/다른 폴더의 숨겨진 항목 순서를 보존한다. 휴지통·저장 중에는 드래그를 막는다. 파일 드래그 정렬 시 사용자 지정순으로 전환한다.
+- 메모 폴더는 기존 category 기반의 평면 폴더다. 사용자 폴더 추가와 빈 폴더 보존을 지원한다. 기존 편집기 저장 초안이 있으면 이동 전 저장하고 이동 후 category가 이전 값으로 되돌아가지 않도록 갱신한다. 실제 중첩 폴더는 드라이브에만 있다.
+- `components/layout/navigation-sections.tsx`: 즐겨찾기와 접기 가능한 계획·집중/생활 관리/자료·정보 그룹. 내 프로필·설정은 PC 사이드바와 모바일 전체 메뉴의 하단에 고정하고 기능 목록만 스크롤한다. 별 버튼으로 즐겨찾기 추가/해제. 기존 Alt+1~9 번호는 보존한다.
+- `components/profile-workspace.tsx`, `/api/profile`: 본인 이메일 조회 및 profiles.display_name 수정(1~60자), 로그아웃. 기존 profiles RLS를 사용하며 다른 계정 ID는 입력받지 않는다.
 
 ### 캘린더
 
@@ -125,7 +134,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 - 800ms 자동 저장, Ctrl/⌘+S, 저장 요청 직렬화. 새 메모 UUID 재사용/POST upsert로 재시도 중복 방지. 제목 변경 PATCH 응답을 목록에 즉시 반영한다.
 - 목록 복귀/다른 메모 열기 전 저장 완료 확인, 미저장 시 이탈 경고. 50,000자 초과 저장은 절단 대신 오류 반환.
 - 삭제는 `deleted_at` 기반 휴지통 이동. 메모 탭 휴지통에서 내용/필기를 확인하고 30일 이내 복원한다. DB trigger와 활성 항목 API 필터가 삭제 후 자동 저장 및 만료 복원을 차단한다. worker의 `purge_expired_notes`가 만료 메모를 정리한다. 이 기능 적용 전에 이미 영구 삭제된 메모는 복구할 수 없다.
-- `components/note-card.tsx`: 메모 우클릭 메뉴에서 열기/삭제, 휴지통에서는 내용 보기/복원. 더보기와 편집기의 삭제 버튼은 사용자 요청으로 제거했다. 삭제는 카드 우클릭 메뉴에서 확인 팝업 없이 30일 휴지통으로 이동한다. 터치에서는 길게 눌러 메뉴를 연다. 고정 표시는 미리보기 내부 좌측 상단에 겹쳐 표시한다. 클릭한 메모 ID로 처리하고 요청 실패 시 목록을 유지하며 오류를 표시한다. 동시 삭제/복원 요청을 막는다.
+- `components/note-card.tsx`: 메모 우클릭 메뉴에서 열기/삭제, 휴지통에서는 내용 보기/복원. 더보기와 편집기의 삭제 버튼은 사용자 요청으로 제거했다. 삭제는 카드 우클릭 메뉴에서 확인 팝업 없이 30일 휴지통으로 이동한다. 터치에서는 길게 눌러 메뉴를 연다. 고정 표시는 미리보기 내부 우측 상단에 겹쳐 표시한다. 핀 모양만 남기고 배경/그림자와 핀용 여백을 제거해 줄바꿈·미리보기 배치를 바꾸지 않는다. 클릭한 메모 ID로 처리하고 요청 실패 시 목록을 유지하며 오류를 표시한다. 동시 삭제/복원 요청을 막는다.
 
 ### 복습 / 학습
 
@@ -158,9 +167,11 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 - 집중/휴식 타이머는 `chi-hub-focus-timer-v2` 종료 시각으로 새로고침/백그라운드 복원. 완료 팝업은 body portal이라 숨겨진 탭에서도 표시.
 - 루틴의 일간/요일 반복 및 날짜별 daily_tasks, 수면 시작/종료/직접 기록(진행 기록은 사용자당 하나), 운동 기록/최근 7일 요약 유지.
 - 학식은 대전대 공식 HTML에서 혜화문화관/제2생활관/HRC 파싱. 기존 cbnu/hufs 저장 선택도 dju로 복원. 타 학교 서버 코드는 남아 있지만 UI 복원 금지. 브라우저 5분/서버 30분/stale 24시간 cache, 외부 HTML 변경에 취약.
-- 학식은 PC에서 조식 | 중식 | 석식 세 열을 나란히 놓고 식당별 메뉴를 각 열에 세로로 쌓는다. 모바일(820px 이하)은 한 열로 전환한다. 제목·아이콘·테두리와 식사 필터를 유지한다. 아침/점심/저녁 별칭도 인식하며 복합/미분류 표기는 원문을 유지해 기타 식사로 표시한다. 없는 식사는 미공개 안내를 보여준다.
+- 학식은 PC에서 조식 | 중식 | 석식 세 열을 나란히 놓고 식당별 메뉴를 각 열에 세로로 쌓는다. 모바일(820px 이하)은 한 열로 전환한다. 제목·아이콘·테두리는 유지하며 전체 식사/조식/중식/석식 필터는 제거했다. 날짜·식당 선택은 유지한다. 아침/점심/저녁 별칭도 인식하며 복합/미분류 표기는 원문을 유지해 기타 식사로 표시한다. 없는 식사는 미공개 안내를 보여준다.
 
 ## DB 변경 이력과 주의점
+
+- `20260929084024_workspace_preferences.sql`: 계정별 폴더/순서/즐겨찾기 및 version, 본인 소유 RLS/권한. 운영 적용 완료, 합성 계정 트랜잭션 롤백으로 권한·충돌 검증. 기존 사용자 자료 테이블/Storage 변경 없음.
 
 - 기존 `0001`~`0005`: 사용자 자료/Storage/RLS, 수면 제한/500 MiB, 반복 루틴/daily_tasks, calendar_events, 메모 유형/카테고리/필기.
 - `20260922092822_drive_trash.sql`: files.deleted_at/purge_started_at, 30일 보관 trigger, service_role 전용 claim_expired_files. 운영 적용 완료.
@@ -183,7 +194,7 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 ```powershell
 npm.cmd run typecheck
-node --test scripts/calendar.test.mjs scripts/trash-worker.test.mjs scripts/productivity.test.mjs
+node --test scripts/calendar.test.mjs scripts/trash-worker.test.mjs scripts/productivity.test.mjs scripts/preferences.test.mjs
 $env:NEXT_PUBLIC_SUPABASE_URL='https://smoke-test.invalid'
 $env:NEXT_PUBLIC_SUPABASE_ANON_KEY='smoke-test-anon-key'
 $env:NEXT_PUBLIC_SITE_URL='https://chitoolbox.com'
@@ -210,6 +221,7 @@ node scripts/test-workspaces.mjs
 Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 설치하고 TEST_BROWSER를 `chromium`으로 사용한다. 이 스크립트는 localhost만 허용하며 `/api/**`를 mock한다. UI 검사 결과가 실제 로그인/운영 Storage CRUD 성공을 의미하지 않는다. 캡처는 Git 제외 `work/qa/`에 생성한다.
 
 - `scripts/test-drive-folders.sql`: 합성 계정/자료로 계층·복원·RLS 검사. 단독 실행하면 안 되며 **명시적인 BEGIN/ROLLBACK 안에서** 실행한다. 정기 자동 테스트가 아니다. 기존 `scripts/test-trash.sql`도 롤백 검사용이다.
+- `scripts/test-preferences.sql`은 전체 BEGIN/ROLLBACK 트랜잭션으로 합성 계정 소유권/anon 차단/오래된 버전 갱신 차단을 검사한다.
 - `scripts/test-study-notes.sql`은 BEGIN/ROLLBACK을 포함한 전체 파일로 실행한다. 합성 계정으로 간격/중복/오래된 복습/보관/RLS/메모 복원·만료/RPC 권한을 검사한다. 실제 사용자 자료를 만들거나 변경하지 않는다.
 - 브라우저 검사에서 Edge 다운로드는 인터셉트 밖의 재요청이 발생하므로 다운로드 링크 경로 검증 후 별도 loopback HTTP fixture로 UTF-8 파일명/실제 바이트를 검사한다. 이것은 실제 운영 로그인·Storage 다운로드 검증을 대신하지 않는다.
 - 전체 `npm.cmd run lint`는 현재 `app/api/routines/route.ts`의 no-base-to-string 2건(42/91행)이 남는다. 이번 문서 정리에서 다시 확인했다. 이전 문서의 8건/3건은 오래된 결과다.
@@ -228,6 +240,11 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 복잡한 원격 PowerShell은 UTF-16LE Base64 `-EncodedCommand`로 전달하면 중첩 인용 문제를 줄일 수 있다. `work/`의 이전 임시 배포/키 설정 스크립트는 bundle에 없으며 새 PC 필수 도구로 취급하지 않는다.
 
 ## 검증 완료 / 남은 확인 사항
+
+### 2026-09-29 드래그 / 탭 정리
+
+- 식사 필터 제거, 미리보기 배치를 유지하는 우측 핀, 메모·파일 드래그 이동/순서, 사용자 메모 폴더, 계정 즐겨찾기·하단 프로필/설정을 구현했다.
+- 새 설정 migration 적용 및 합성 계정 RLS/버전 충돌 테스트 롤백 완료, 보안 Advisor 새 경고 없음. 타입 검사/변경 파일 lint/단위 검사 11개/production build/HTTP smoke 통과. mock Edge에서 메모·파일 드래그 폴더 이동과 순서 저장·재접속 유지, 실패 복구, 즐겨찾기·설정 충돌 보호, 하단 메뉴 고정, 프로필 저장, 기존 기능 및 11개 화면 × 5너비 검사를 통과했다. PC 캡처 확인 완료. 운영 전달 준비 완료이며 배포 결과는 완료 후 갱신한다.
 
 ### 2026-09-29 카드 배치 / 우클릭 통일
 

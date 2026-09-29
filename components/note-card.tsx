@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import type { HTMLAttributes } from 'react';
 import { BookOpen, Pin, RotateCcw, Trash2 } from 'lucide-react';
 import type { Note } from '@/hooks/use-note-editor';
 import {
@@ -18,7 +19,9 @@ export function NoteCard({
   onOpen,
   onRemove,
   onRestore,
+  dragProps,
 }: {
+  dragProps?: HTMLAttributes<HTMLDivElement>;
   note: Note;
   trash: boolean;
   busy: boolean;
@@ -46,7 +49,7 @@ export function NoteCard({
   ];
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="note-card">
+      <ContextMenuTrigger className="note-card" {...dragProps}>
         <button className="note-tile" onClick={onOpen} disabled={busy}>
           <div className={`note-paper ${note.content_type}`}>
             {note.pinned && (

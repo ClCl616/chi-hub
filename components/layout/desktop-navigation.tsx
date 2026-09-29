@@ -1,12 +1,12 @@
 'use client';
-import { Fragment } from 'react';
-import { LogIn, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { TabsList } from '@/components/ui/tabs';
+import { NavigationSections } from './navigation-sections';
 import type { NavigationProps } from './navigation-types';
 export function DesktopNavigation({
   navigation,
-  authState,
-  logout,
+  activeView,
+  selectView,
   toggleSidebar,
 }: NavigationProps) {
   return (
@@ -31,37 +31,12 @@ export function DesktopNavigation({
         </div>
         <div className="side-nav">
           <TabsList className="workspace-tab-list" aria-label="작업 구분">
-            {navigation.map(({ id, label, icon: Icon }, index) => (
-              <Fragment key={id}>
-                {[0, 5, 7].includes(index) && (
-                  <div className="nav-group-label">
-                    {index === 0
-                      ? '계획 · 집중'
-                      : index === 5
-                        ? '생활 관리'
-                        : '자료 · 정보'}
-                  </div>
-                )}
-                <TabsTrigger className="workspace-tab" value={id} title={label}>
-                  <Icon size={19} />
-                  <span>{label}</span>
-                </TabsTrigger>
-              </Fragment>
-            ))}
+            <NavigationSections
+              navigation={navigation}
+              activeView={activeView}
+              selectView={selectView}
+            />
           </TabsList>
-        </div>
-        <div className="sidebar-footer">
-          {authState === 'ready' ? (
-            <button onClick={logout} type="button">
-              <LogOut size={18} />
-              로그아웃
-            </button>
-          ) : (
-            <a href="/login">
-              <LogIn size={18} />
-              로그인
-            </a>
-          )}
         </div>
       </aside>
       <button

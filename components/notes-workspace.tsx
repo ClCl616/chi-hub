@@ -19,6 +19,14 @@ import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
 import { apiRequest, useApi } from '@/hooks/use-api';
 import { type Note, useNoteEditor } from '@/hooks/use-note-editor';
+import { useWorkspacePreferences } from '@/hooks/use-workspace-preferences';
+import { useCardDrag } from '@/hooks/use-card-drag';
+import {
+  defaultNoteFolders,
+  noteDragType,
+  orderRank,
+  reorderIds,
+} from '@/lib/workspace-preferences';
 import { NoteCard } from '@/components/note-card';
 import { DataNotice } from '@/components/feature-layout';
 const RichNoteEditor = lazy(() =>
@@ -29,7 +37,6 @@ const RichNoteEditor = lazy(() =>
 import { DrawingPad } from '@/components/drawing-pad';
 import { WorkspaceDialog } from '@/components/workspace-dialog';
 
-const categories = ['업무', '공부', '아이디어', '개인'];
 export function NotesWorkspace() {
   const notes = useApi<{ notes: Note[] }>('/api/notes');
   const trashNotes = useApi<{ notes: Note[] }>('/api/notes?trash=true');
@@ -42,6 +49,18 @@ export function NotesWorkspace() {
     })),
   );
   const { draft, update, save, status, saving } = editor;
+  const prefs = useWorkspacePreferences();
+  const categories = [
+    ...new Set([
+      ...defaultNoteFolders,
+      ...prefs.preferences.noteFolders,
+      ...(notes.data?.notes ?? [])
+        .map((note) => note.category)
+        .filter((name) => name && !['전체', '고정', '휴지통'].includes(name)),
+    ]),
+  ];
+  const [folderDialog, setFolderDialog] = useState(false),
+    [folderName, setFolderName] = useState('');
   const root = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLTextAreaElement>(null);
   const [editing, setEditing] = useState(false);
@@ -61,6 +80,10 @@ export function NotesWorkspace() {
     return () => clearInterval(timer);
   }, []);
   const trash = category === '휴지통';
+  const drag = useCardDrag(
+    noteDragType,
+    trash || deleting || prefs.saving || !prefs.ready,
+  );
   const records = trash ? trashNotes : notes;
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -90,9 +113,77 @@ export function NotesWorkspace() {
     )
     .sort(
       (a, b) =>
+        orderRank(prefs.preferences.noteOrder, a.id) -
+          orderRank(prefs.preferences.noteOrder, b.id) ||
         Number(b.pinned) - Number(a.pinned) ||
         b.updated_at.localeCompare(a.updated_at),
     );
+  async function moveToFolder(id: string, destination: string) {
+    const note = notes.data?.notes.find((note) => note.id === id);
+    if (!note || note.category === destination || mutationPending.current)
+      return;
+    mutationPending.current = true;
+    setDeleting(true);
+    setError('');
+    setNotice('');
+    try {
+      if (id === draft.id && !(await save()))
+        throw new Error('메모를 저장한 뒤 이동해주세요.');
+      const result = await apiRequest<{ note: Note }>('/api/notes', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, category: destination }),
+      });
+      notes.setData((data) => ({
+        notes: (data?.notes ?? []).map((item) =>
+          item.id === id ? result.note : item,
+        ),
+      }));
+      if (id === draft.id) editor.reset(result.note);
+      setNotice(`${destination} 폴더로 이동했습니다.`);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : '이동하지 못했습니다.',
+      );
+    } finally {
+      mutationPending.current = false;
+      setDeleting(false);
+    }
+  }
+  async function reorder(source: string, target: string) {
+    if (source === target) return;
+    await prefs.savePreference(
+      'noteOrder',
+      reorderIds(
+        prefs.preferences.noteOrder,
+        filtered.map((note) => note.id),
+        source,
+        target,
+      ),
+    );
+  }
+  async function addFolder() {
+    const name = folderName.trim();
+    if (
+      !name ||
+      name.length > 40 ||
+      ['전체', '고정', '휴지통', ...categories].includes(name)
+    ) {
+      setError('겹치지 않는 폴더 이름을 1~40자로 입력해주세요.');
+      return;
+    }
+    if (
+      await prefs.savePreference('noteFolders', [
+        ...prefs.preferences.noteFolders,
+        name,
+      ])
+    ) {
+      setFolderDialog(false);
+      setFolderName('');
+      setCategory(name);
+      setQuery('');
+    }
+  }
   async function open(note?: Note) {
     if (await editor.open(note)) {
       setEditing(true);
@@ -178,6 +269,14 @@ export function NotesWorkspace() {
             {['전체', '고정', ...categories, '휴지통'].map((item) => (
               <button
                 key={item}
+                {...(categories.includes(item)
+                  ? {
+                      ...drag.dropZone(`folder:${item}`),
+                      onDrop: (event) =>
+                        drag.drop(event, (id) => void moveToFolder(id, item)),
+                    }
+                  : {})}
+                disabled={deleting}
                 className={category === item ? 'active' : ''}
                 onClick={() => {
                   setCategory(item);
@@ -210,6 +309,17 @@ export function NotesWorkspace() {
                 </span>
               </button>
             ))}
+            <button
+              className="note-folder-add"
+              disabled={!prefs.ready || prefs.saving || deleting}
+              onClick={() => {
+                setError('');
+                setFolderDialog(true);
+              }}
+            >
+              <Plus size={16} />
+              폴더 추가
+            </button>
           </aside>
           <section className="notes-library">
             <header className="library-toolbar">
@@ -256,6 +366,20 @@ export function NotesWorkspace() {
                 </button>
               </div>
             </div>
+            {!trash && (
+              <p className="drive-hint">
+                카드를 다른 카드에 끌어 순서를 바꾸거나 왼쪽 폴더에 놓아
+                이동하세요.
+              </p>
+            )}
+            {prefs.error && (
+              <p role="alert">
+                {prefs.error}
+                <button onClick={() => void prefs.refresh()}>
+                  다시 불러오기
+                </button>
+              </p>
+            )}
             {trash && (
               <p className="drive-hint">
                 삭제한 메모는 30일 동안 복원할 수 있으며, 이후 자동으로 영구
@@ -277,6 +401,12 @@ export function NotesWorkspace() {
               {filtered.map((note) => (
                 <NoteCard
                   key={note.id}
+                  dragProps={{
+                    ...drag.draggable(note.id),
+                    ...drag.dropZone(`note:${note.id}`),
+                    onDrop: (event) =>
+                      drag.drop(event, (id) => void reorder(id, note.id)),
+                  }}
                   note={note}
                   trash={trash}
                   busy={deleting}
@@ -439,6 +569,32 @@ export function NotesWorkspace() {
           </div>
         </section>
       )}
+      <WorkspaceDialog
+        open={folderDialog}
+        onOpenChange={setFolderDialog}
+        title="메모 폴더 추가"
+        description="메모를 드래그해 이 폴더로 옮길 수 있습니다."
+      >
+        <form
+          className="stack-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void addFolder();
+          }}
+        >
+          <input
+            aria-label="메모 폴더 이름"
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            maxLength={40}
+            required
+          />
+          <button className="submit-button" disabled={prefs.saving}>
+            폴더 만들기
+          </button>
+          {(error || prefs.error) && <p role="alert">{error || prefs.error}</p>}
+        </form>
+      </WorkspaceDialog>
       <WorkspaceDialog
         open={!!trashedNote}
         onOpenChange={(value) => {

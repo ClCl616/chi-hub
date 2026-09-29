@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { WorkspacePreferencesProvider } from '@/hooks/use-workspace-preferences';
 import { WorkspaceStatus } from '@/components/workspace-status';
 import { WorkspaceShortcuts } from '@/components/workspace-shortcuts';
 import {
@@ -13,6 +14,7 @@ import {
   UtensilsCrossed,
   GraduationCap,
   Settings,
+  UserRound,
 } from 'lucide-react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 import { DesktopNavigation } from '@/components/layout/desktop-navigation';
@@ -31,6 +33,7 @@ const navigation = [
   { id: 'workouts', label: '운동', icon: Dumbbell },
   { id: 'files', label: '드라이브', icon: HardDrive },
   { id: 'meals', label: '학식', icon: UtensilsCrossed },
+  { id: 'profile', label: '내 프로필', icon: UserRound },
   { id: 'settings', label: '설정', icon: Settings },
 ];
 const viewChanged = 'chi-hub-view-changed';
@@ -80,6 +83,13 @@ function getServerSidebarSnapshot() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <WorkspacePreferencesProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </WorkspacePreferencesProvider>
+  );
+}
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const activeView = useSyncExternalStore(
     subscribeToView,
     getViewSnapshot,

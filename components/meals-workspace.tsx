@@ -32,7 +32,6 @@ export function MealsWorkspace() {
   const [data, setData] = useState<CampusMealsResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [cafeteria, setCafeteria] = useState('전체');
-  const [period, setPeriod] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -154,93 +153,68 @@ export function MealsWorkspace() {
                   </button>
                 ))}
               </section>
-              <section className="meal-period-filter" aria-label="식사 구분">
-                {[{ id: 'all', label: '전체 식사' }, ...mealPeriods].map(
-                  (item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={period === item.id}
-                      onClick={() => setPeriod(item.id)}
-                    >
-                      {item.label}
-                    </button>
-                  ),
-                )}
-              </section>
               {visibleMeals.length ? (
-                <div
-                  className={`meal-periods ${period === 'all' ? 'all-periods' : 'single-period'}`}
-                >
-                  {mealPeriods
-                    .filter((item) => period === 'all' || period === item.id)
-                    .map((item) => {
-                      const entries = visibleMeals.filter(
-                        (meal) => mealPeriod(meal.mealType) === item.id,
-                      );
-                      if (
-                        period === 'all' &&
-                        item.id === 'other' &&
-                        !entries.length
-                      )
-                        return null;
-                      const Icon =
-                        item.id === 'breakfast'
-                          ? Sunrise
-                          : item.id === 'lunch'
-                            ? Sun
-                            : item.id === 'dinner'
-                              ? Moon
-                              : UtensilsCrossed;
-                      return (
-                        <section
-                          key={item.id}
-                          className={`meal-period ${item.id}`}
-                          aria-label={`${item.label} 식단`}
-                        >
-                          <header className="meal-period-heading">
-                            <Icon size={23} />
-                            <h3>
-                              {item.label} <span>{item.description}</span>
-                            </h3>
-                            <small>{entries.length}개 식단</small>
-                          </header>
-                          {entries.length ? (
-                            <div className="meal-card-grid">
-                              {entries.map((meal, index) => (
-                                <article
-                                  className="meal-card"
-                                  key={`${meal.cafeteria}-${meal.mealType}-${index}`}
-                                >
-                                  <header>
-                                    <span>{meal.cafeteria}</span>
-                                    <strong>{meal.mealType}</strong>
-                                  </header>
-                                  <ul>
-                                    {meal.menu.map((item, itemIndex) => (
-                                      <li key={`${item}-${itemIndex}`}>
-                                        {item}
-                                      </li>
+                <div className="meal-periods all-periods">
+                  {mealPeriods.map((item) => {
+                    const entries = visibleMeals.filter(
+                      (meal) => mealPeriod(meal.mealType) === item.id,
+                    );
+                    if (item.id === 'other' && !entries.length) return null;
+                    const Icon =
+                      item.id === 'breakfast'
+                        ? Sunrise
+                        : item.id === 'lunch'
+                          ? Sun
+                          : item.id === 'dinner'
+                            ? Moon
+                            : UtensilsCrossed;
+                    return (
+                      <section
+                        key={item.id}
+                        className={`meal-period ${item.id}`}
+                        aria-label={`${item.label} 식단`}
+                      >
+                        <header className="meal-period-heading">
+                          <Icon size={23} />
+                          <h3>
+                            {item.label} <span>{item.description}</span>
+                          </h3>
+                          <small>{entries.length}개 식단</small>
+                        </header>
+                        {entries.length ? (
+                          <div className="meal-card-grid">
+                            {entries.map((meal, index) => (
+                              <article
+                                className="meal-card"
+                                key={`${meal.cafeteria}-${meal.mealType}-${index}`}
+                              >
+                                <header>
+                                  <span>{meal.cafeteria}</span>
+                                  <strong>{meal.mealType}</strong>
+                                </header>
+                                <ul>
+                                  {meal.menu.map((item, itemIndex) => (
+                                    <li key={`${item}-${itemIndex}`}>{item}</li>
+                                  ))}
+                                </ul>
+                                {meal.prices?.length ? (
+                                  <footer>
+                                    {meal.prices.map((price) => (
+                                      <span key={price}>{price}</span>
                                     ))}
-                                  </ul>
-                                  {meal.prices?.length ? (
-                                    <footer>
-                                      {meal.prices.map((price) => (
-                                        <span key={price}>{price}</span>
-                                      ))}
-                                    </footer>
-                                  ) : null}
-                                </article>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="meal-period-empty">
-                              공개된 {item.label} 식단이 없습니다.
-                            </p>
-                          )}
-                        </section>
-                      );
-                    })}
+                                  </footer>
+                                ) : null}
+                              </article>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="meal-period-empty">
+                            공개된 {item.label} 식단이 없습니다.
+                          </p>
+                        )}
+                      </section>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="meal-state">

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import type { HTMLAttributes } from 'react';
 import {
   Download,
   File as FileIcon,
@@ -41,7 +42,9 @@ export function DriveFileCard({
   now,
   onMove,
   onTrash,
+  dragProps,
 }: {
+  dragProps?: HTMLAttributes<HTMLDivElement>;
   item: StoredFile;
   trash: boolean;
   busy: boolean;
@@ -59,7 +62,14 @@ export function DriveFileCard({
     <>
       <div className="drive-thumbnail">
         {item.mime_type?.startsWith('image/') && item.url ? (
-          <Image src={item.url} alt="" width={180} height={225} unoptimized />
+          <Image
+            draggable={false}
+            src={item.url}
+            alt=""
+            width={180}
+            height={225}
+            unoptimized
+          />
         ) : (
           <FileIcon size={48} />
         )}
@@ -79,13 +89,14 @@ export function DriveFileCard({
   );
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="drive-item">
+      <ContextMenuTrigger className="drive-item" {...dragProps}>
         {trash ? (
           <div className="drive-file-card" aria-label={item.name}>
             {contents}
           </div>
         ) : (
           <a
+            draggable={false}
             className="drive-file-card"
             href={href}
             download={item.name}

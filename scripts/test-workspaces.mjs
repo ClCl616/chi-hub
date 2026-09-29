@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { chromium } from 'playwright';
 import { attachmentHeader } from '../lib/download.ts';
+import { emptyPreferences } from '../lib/workspace-preferences.ts';
 import { reviewInterval } from '../lib/study.ts';
 
 const base = process.env.TEST_BASE_URL ?? 'http://127.0.0.1:13002';
@@ -54,6 +55,14 @@ let files = [
   },
 ];
 const writes = [];
+const preferences = structuredClone(emptyPreferences);
+const preferenceVersions = {};
+let failNextPreference = false;
+const profile = {
+  email: 'qa@example.test',
+  displayName: '테스트 사용자',
+  createdAt: date,
+};
 let failNextNote = false;
 let failNextNoteDelete = false;
 let failNextDelete = false;
@@ -121,6 +130,31 @@ await context.route('**/api/**', async (route) => {
       contentType: 'application/json',
       body: JSON.stringify(body),
     });
+  if (url.pathname === '/api/preferences') {
+    if (method === 'GET')
+      return reply({ preferences, versions: preferenceVersions });
+    const body = request.postDataJSON();
+    if (failNextPreference) {
+      failNextPreference = false;
+      return reply({ message: '설정 저장 테스트 오류' }, 503);
+    }
+    if ((preferenceVersions[body.key] ?? null) !== body.version)
+      return reply({ message: '다른 화면에서 설정이 변경되었습니다.' }, 409);
+    preferences[body.key] = body.value;
+    preferenceVersions[body.key] = crypto.randomUUID();
+    return reply({
+      key: body.key,
+      value: body.value,
+      version: preferenceVersions[body.key],
+    });
+  }
+  if (url.pathname === '/api/profile') {
+    if (method === 'PATCH') {
+      profile.displayName = request.postDataJSON().displayName;
+      return reply({ ok: true });
+    }
+    return reply({ profile });
+  }
   if (url.pathname === '/api/auth/status')
     return reply({ user: { id: 'qa-user' } });
   if (url.pathname === '/api/notes') {
@@ -160,9 +194,11 @@ await context.route('**/api/**', async (route) => {
       return reply({ message: '테스트 저장 실패' }, 503);
     }
     await pause(700);
+    const previousNote = notes.find((note) => note.id === body.id);
     const note = {
+      ...previousNote,
       ...body,
-      content_type: body.contentType,
+      content_type: body.contentType ?? previousNote?.content_type,
       created_at: date,
       updated_at: new Date().toISOString(),
     };
@@ -359,11 +395,29 @@ try {
   const previewBox = await page.locator('.note-paper').first().boundingBox();
   assert.ok(
     pinBox.x >= previewBox.x &&
-      pinBox.x < previewBox.x + 20 &&
+      pinBox.x > previewBox.x + previewBox.width - 45 &&
       pinBox.y >= previewBox.y &&
       pinBox.y < previewBox.y + 20,
-    'Pin overlays top-left of preview',
+    'Pin overlays top-right of preview',
   );
+  const pinStyles = await page.locator('.note-pin').evaluate((el) => ({
+    background: getComputedStyle(el).backgroundColor,
+    shadow: getComputedStyle(el).boxShadow,
+  }));
+  assert.equal(pinStyles.background, 'rgba(0, 0, 0, 0)');
+  assert.equal(pinStyles.shadow, 'none');
+  const withPin = await page
+    .locator('.note-paper > strong')
+    .evaluate((el) => el.getBoundingClientRect().y);
+  await page.locator('.note-pin').evaluate((el) => {
+    el.style.display = 'none';
+  });
+  const withoutPin = await page
+    .locator('.note-paper > strong')
+    .evaluate((el) => el.getBoundingClientRect().y);
+  assert.equal(withPin, withoutPin, 'Pin does not alter preview layout');
+  await page.reload();
+  await page.locator('.note-pin').waitFor();
   await page.screenshot({ path: 'work/qa/note-pin.png', fullPage: true });
   await page.getByRole('button', { name: '메모 작성' }).click();
   await page.getByLabel('메모 제목', { exact: true }).fill('저장 경합 테스트');
@@ -837,10 +891,7 @@ try {
     mealBoxes.every((box) => Math.abs(box.y - mealBoxes[0].y) < 2),
     'Breakfast, lunch and dinner align in three columns',
   );
-  await page.getByRole('button', { name: '석식', exact: true }).click();
-  assert.equal(await page.locator('.meal-period').count(), 1);
-  await page.getByRole('region', { name: '석식 식단' }).waitFor();
-  await page.getByRole('button', { name: '전체 식사', exact: true }).click();
+  assert.equal(await page.locator('.meal-period-filter').count(), 0);
   await page.screenshot({ path: 'work/qa/meals-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await pause(350);
@@ -912,6 +963,249 @@ try {
     'Delete on folder button moves folder to trash',
   );
 
+  // Account preferences, folders and real desktop drag/drop.
+  await page.goto(base + '/?view=notes');
+  const nav = page.locator('.sidebar');
+  await nav
+    .getByRole('button', { name: '메모 즐겨찾기 추가', exact: true })
+    .click();
+  await waitFor(
+    () => preferences.favorites.includes('notes'),
+    'Favorite saved',
+  );
+  await page.reload();
+  await nav
+    .locator('.favorite-section')
+    .getByRole('tab', { name: '메모', exact: true })
+    .waitFor();
+  failNextPreference = true;
+  await nav
+    .getByRole('button', { name: '드라이브 즐겨찾기 추가', exact: true })
+    .click();
+  await nav
+    .getByRole('alert')
+    .filter({ hasText: '설정 저장 테스트 오류' })
+    .waitFor();
+  assert.ok(
+    !preferences.favorites.includes('files'),
+    'Failed favorite does not persist',
+  );
+  await nav
+    .getByRole('button', { name: '드라이브 즐겨찾기 추가', exact: true })
+    .click();
+  await waitFor(
+    () => preferences.favorites.includes('files'),
+    'Favorite retry saved',
+  );
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await pause(350);
+  const fixed = await nav.locator('.navigation-fixed').boundingBox();
+  assert.ok(
+    fixed.y + fixed.height <= 600 && fixed.y > 400,
+    'Profile/settings remain visible at sidebar bottom',
+  );
+  await nav.locator('.navigation-scroll').evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  assert.equal(
+    (await nav.locator('.navigation-fixed').boundingBox()).y,
+    fixed.y,
+  );
+  await page.screenshot({ path: 'work/qa/sidebar-fixed.png', fullPage: true });
+  await nav.getByRole('tab', { name: '내 프로필', exact: true }).click();
+  await page.getByLabel('프로필 이메일').waitFor();
+  assert.equal(
+    await page.getByLabel('프로필 이메일').inputValue(),
+    'qa@example.test',
+  );
+  await page.getByLabel('표시 이름', { exact: true }).fill('새 이름');
+  await page.getByRole('button', { name: '프로필 저장' }).click();
+  await page.getByText('프로필을 저장했습니다.', { exact: true }).waitFor();
+  assert.equal(profile.displayName, '새 이름');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await pause(350);
+  await page.goto(base + '/?view=notes');
+  const noteCards = page.locator('.note-card');
+  await noteCards.first().waitFor();
+  const initialTitles = await page
+    .locator('.note-tile > strong')
+    .allTextContents();
+  await noteCards.last().dragTo(noteCards.first());
+  await waitFor(
+    () => preferences.noteOrder.length >= 2,
+    'Note order saved after dragging',
+  );
+  assert.equal(
+    (await page.locator('.note-tile > strong').allTextContents())[0],
+    initialTitles.at(-1),
+  );
+  await page.reload();
+  await page.locator('.note-tile').first().waitFor();
+  assert.equal(
+    (await page.locator('.note-tile > strong').allTextContents())[0],
+    initialTitles.at(-1),
+    'Note order survives reload',
+  );
+  const orderBeforeFailure = [...preferences.noteOrder];
+  failNextPreference = true;
+  await noteCards.last().dragTo(noteCards.first());
+  await page
+    .locator('.notes-library')
+    .getByRole('alert')
+    .filter({ hasText: '설정 저장 테스트 오류' })
+    .waitFor();
+  assert.deepEqual(
+    preferences.noteOrder,
+    orderBeforeFailure,
+    'Failed reorder retains saved order',
+  );
+  await page.getByRole('button', { name: '폴더 추가', exact: true }).click();
+  await page.getByLabel('메모 폴더 이름').fill('프로젝트');
+  await page.getByRole('button', { name: '폴더 만들기', exact: true }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /^전체/ })
+    .click();
+  const movingTitle = (
+    await page.locator('.note-tile > strong').allTextContents()
+  )[0];
+  const movingNote = notes.find((note) => note.title === movingTitle);
+  const contentBeforeMove = movingNote.content;
+  await noteCards
+    .first()
+    .dragTo(
+      page
+        .locator('.notes-categories')
+        .getByRole('button', { name: /^프로젝트/ }),
+    );
+  await waitFor(
+    () =>
+      notes.find((note) => note.id === movingNote.id).category === '프로젝트',
+    'Note moved to custom folder',
+  );
+  assert.equal(
+    notes.find((note) => note.id === movingNote.id).content,
+    contentBeforeMove,
+  );
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /^프로젝트/ })
+    .click();
+  await page.locator('.note-tile').filter({ hasText: movingTitle }).waitFor();
+  failNextNote = true;
+  await noteCards
+    .first()
+    .dragTo(
+      page.locator('.notes-categories').getByRole('button', { name: /^업무/ }),
+    );
+  await page
+    .locator('.notes-library')
+    .getByRole('alert')
+    .filter({ hasText: '테스트 저장 실패' })
+    .waitFor();
+  assert.equal(
+    notes.find((note) => note.id === movingNote.id).category,
+    '프로젝트',
+  );
+  await page.reload();
+  await page
+    .locator('.notes-categories')
+    .getByRole('button', { name: /^프로젝트/ })
+    .waitFor();
+  // A second device changing favorites must not be overwritten silently.
+  preferenceVersions.favorites = crypto.randomUUID();
+  preferences.favorites = ['study'];
+  await nav
+    .getByRole('button', { name: '메모 즐겨찾기 해제', exact: true })
+    .click();
+  await nav.getByRole('alert').filter({ hasText: '다른 화면' }).waitFor();
+  assert.deepEqual(preferences.favorites, ['study']);
+  await nav
+    .locator('.favorite-section')
+    .getByRole('tab', { name: '복습 · 학습', exact: true })
+    .waitFor();
+  await page.goto(base + '/?view=files');
+  const activeFiles = files.filter(
+    (file) => !file.deleted_at && !file.folder_id,
+  );
+  while (activeFiles.length < 2) {
+    const item = {
+      id: crypto.randomUUID(),
+      name: '순서 파일 ' + activeFiles.length + '.txt',
+      folder_id: null,
+      trash_root_id: null,
+      mime_type: 'text/plain',
+      size_bytes: 100,
+      created_at: date,
+      deleted_at: null,
+      purge_started_at: null,
+      url: null,
+    };
+    files.push(item);
+    activeFiles.push(item);
+  }
+  await page.reload();
+  await page.locator('.drive-item').nth(1).waitFor();
+  const firstFileTitles = await page
+    .locator('.drive-file-info strong')
+    .allTextContents();
+  await page
+    .locator('.drive-item')
+    .last()
+    .dragTo(page.locator('.drive-item').first());
+  await waitFor(
+    () => preferences.fileOrder.length >= 2,
+    'File drag order saved',
+  );
+  assert.equal(
+    (await page.locator('.drive-file-info strong').allTextContents())[0],
+    firstFileTitles.at(-1),
+  );
+  await page.reload();
+  await page.locator('.drive-item').nth(1).waitFor();
+  assert.equal(
+    (await page.locator('.drive-file-info strong').allTextContents())[0],
+    firstFileTitles.at(-1),
+  );
+  await page.getByRole('button', { name: '추가', exact: true }).click();
+  await page.getByRole('menuitem', { name: '폴더 추가', exact: true }).click();
+  await page.getByLabel('폴더 이름', { exact: true }).fill('드래그 폴더');
+  await page.getByRole('button', { name: '폴더 저장' }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  const dragFileName = (
+    await page.locator('.drive-file-info strong').allTextContents()
+  )[0];
+  await fileCard(dragFileName).dragTo(
+    page.getByRole('button', { name: '드래그 폴더', exact: true }),
+  );
+  const dragFolder = folders.find((folder) => folder.name === '드래그 폴더');
+  await waitFor(
+    () =>
+      files.find((file) => file.name === dragFileName).folder_id ===
+      dragFolder.id,
+    'File dragged into folder',
+  );
+  await fileCard(dragFileName).waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '드래그 폴더', exact: true }).click();
+  await fileCard(dragFileName).waitFor();
+  await fileCard(dragFileName).dragTo(
+    page
+      .getByRole('navigation', { name: '폴더 경로' })
+      .getByRole('button', { name: '내 드라이브', exact: true }),
+  );
+  await waitFor(
+    () => files.find((file) => file.name === dragFileName).folder_id === null,
+    'File dragged back to root',
+  );
+  await fileCard(dragFileName).waitFor({ state: 'hidden' });
+  await page
+    .getByRole('navigation', { name: '폴더 경로' })
+    .getByRole('button', { name: '내 드라이브', exact: true })
+    .click();
+  await fileCard(dragFileName).waitFor();
+  await page.screenshot({ path: 'work/qa/drag-drive.png', fullPage: true });
+
   for (const width of [360, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await pause(350);
@@ -926,6 +1220,7 @@ try {
       'files',
       'meals',
       'settings',
+      'profile',
     ]) {
       await page.goto(base + '/?view=' + view);
       await page.locator('.tab-view:visible').first().waitFor();
@@ -944,7 +1239,7 @@ try {
     'No browser errors or native confirmation dialogs',
   );
   console.log(
-    'PASS: note save/trash/restore/failure, study CRUD/review/archive, meal grouping/filter, original download filename, Windows shortcuts, drive/calendar regressions note context menus/settings and ten responsive panels.',
+    'PASS: note save/trash/restore/failure, study CRUD/review/archive, meal columns, original download filename, Windows shortcuts, drive/calendar regressions note context menus/settings drag folders/order/favorites/profile and eleven responsive panels.',
   );
 } catch (error) {
   console.error('Browser errors:', errors);
