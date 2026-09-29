@@ -11,7 +11,9 @@
 5. `npm.cmd ci` 실행 후 아래 실행/검증 절차를 따른다. 실제 앱 사용에는 `.env.example`을 참고한 PC 전용 `.env.local`이 필요하다. 운영 Supabase 설정을 사용하면 로컬 CRUD도 실데이터를 바꾼다.
 6. 서버 앱/Caddy/휴지통 작업/키 설정과 적용된 migration은 이미 준비되어 있다. 새 채팅에서 초기 설치나 키 입력을 반복하지 않는다. 최신 배포 상태와 남은 확인 사항은 아래 절을 따른다.
 
-### GitHub에서 최신 소스 복원 (PowerShell)
+### GitHub 소스 복원 (2026-09-22 기준, PowerShell)
+
+2026-09-29 확장까지 복원하려면 아래 Git bundle 절차를 사용한다. 이번 작업은 GitHub push 요청이 없어 로컬/서버에만 전달했다.
 
 새 빈 작업 폴더의 상위 디렉터리에서 실행한다:
 
@@ -71,12 +73,12 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 ## 현재 운영 상태와 환경 구분
 
-2026-09-29 확장 `eb13304`의 로컬 검증·DB migration·Windows 배포를 완료했다. 설치 과정에서 발견한 간접 의존성 fast-uri 보안 패치의 추가 검증/서버 전달을 진행 중이다. GitHub는 마지막 승인된 `4238593` 상태를 유지한다.
+2026-09-29 확장 `eb13304`와 간접 의존성 보안 패치 `60d70d8`의 로컬 검증·DB migration·Windows 배포를 완료했다. 아래 실행 빌드를 공개 HTTPS에서 확인했으며 후속 문서 커밋은 앱 재시작 없이 소스/bundle만 동기화한다. GitHub는 마지막 승인된 `4238593` 상태를 유지한다.
 
 | 항목 | 현재 상태 |
 | --- | --- |
-| 기능 빌드 | `eb13304` |
-| 실행 릴리스 | `C:/Services/chi-hub-runtime/releases/20260929-163538-917-eb133046211a` |
+| 실행 빌드 | `60d70d8` (기능 `eb13304` + 의존성 패치) |
+| 실행 릴리스 | `C:/Services/chi-hub-runtime/releases/20260929-163849-043-60d70d8ea60c` |
 | 서버 소스 | `C:/Services/chi-hub` |
 | 앱 | CHI-HUB-App, LOCAL SERVICE, Running, `127.0.0.1:3000` health 정상 |
 | HTTPS | CHI-HUB-Caddy 서비스 Running, Caddy 2.11.4 |
@@ -98,7 +100,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 스택: React/React DOM/RSC 19.2.8, Vinext 1.0.0-beta.10, Vite 8.3.0, TypeScript 5.9.3, Tailwind 4, Base UI 1.7.0, Supabase JS/SSR. Tiptap 패키지는 3.31.3 고정, 읽기는 react-markdown 10.1.0/remark-gfm 4.0.1. 브라우저 회귀 검사는 Playwright 1.62.1.
 
-- 2026-09-29 의존성 감사에서 `shadcn → @modelcontextprotocol/sdk → ajv → fast-uri`의 취약점 1건이 확인돼 잠금파일의 fast-uri만 3.1.6→3.1.8로 갱신했다. 앱 소스/standalone에서 이 패키지 참조는 확인되지 않았다. 로컬 npm audit는 0건이며 [공식 보안 안내](https://github.com/advisories/GHSA-qw65-cvwx-89v3)의 수정 범위에 해당한다.
+- 2026-09-29 의존성 감사에서 `shadcn → @modelcontextprotocol/sdk → ajv → fast-uri`의 취약점 1건이 확인돼 잠금파일의 fast-uri만 3.1.6→3.1.8로 갱신했다. 앱 소스/standalone에서 이 패키지 참조는 확인되지 않았다. 로컬/서버 npm audit는 0건이며 [공식 보안 안내](https://github.com/advisories/GHSA-qw65-cvwx-89v3)의 수정 범위에 해당한다.
 
 ### 공통 셸과 반응형
 
@@ -231,6 +233,8 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 - 9개 화면 × 360/390/768/1024/1440px 가로 넘침 검사와 PC/모바일 캡처 확인.
 - 새 migration 적용 및 합성 자료 SQL 트랜잭션 롤백 검사 통과. 보안 Advisor 새 경고 없음(기존 유출 비밀번호 보호 비활성화 1건 유지).
 - 운영 사전 확인: 서버 clean/소스 4238593, 앱/Caddy 실행, health 정상. 파일/폴더 worker의 2026-09-29 04:00 실행 결과 0. 이번 메모 worker 확장은 다음 실행 결과 확인 대상이다.
+- 최종 배포: 실행 빌드 `60d70d8`, 앱/Caddy Running, 앱 수신 `127.0.0.1:3000`만 존재, 후보 포트 13000 종료. 공개 health/login/study URL/manifest 200, 미인증 study/notes trash/download API 401. 서버 audit 0건. 실제 계정 로그인·Storage 다운로드는 별도 실사용 확인 대상이다.
+- 드라이브 F2 이름 변경 및 파일/폴더 Delete 휴지통 단축키까지 브라우저에서 확인했다. 이 작업에서 시작한 로컬 QA 서버는 종료했다.
 
 ### 2026-09-22 기능 작업에서 완료
 
@@ -251,9 +255,12 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 6. 기존 routines 린트 2건, 복잡한 Markdown 호환성, 큰 client chunk, 공인 IP/DNS 변경 대응, 로그/릴리스 보관 정책은 후속 개선 후보다.
 7. 모바일은 PWA이며 네이티브 모바일/워치 앱은 아직 만들지 않았다. 관련 보안·확장 안내는 `docs/SECURITY_AND_APPS.md`.
 
-2026-09-29 기능 확장은 배포됐으며 간접 의존성 보안 패치의 서버 전달을 마무리 중이다. 위 후속 후보는 사용자가 요청하지 않은 새 개발 목표로 자동 확대하지 않는다.
+2026-09-29 요청한 기능과 의존성 패치는 검증·운영 배포까지 완료되었다. 위 후속 후보는 사용자가 요청하지 않은 새 개발 목표로 자동 확대하지 않는다.
 
 ## 최근 핵심 이력
+
+- `eb13304`: 간격 복습, 메모 30일 휴지통, 식사별 학식 구분, 원본 파일명 다운로드, Windows 단축키/포커스. 새 DB migration과 회귀 검사 포함, 운영 반영 완료.
+- `60d70d8`: fast-uri 간접 의존성 보안 패치, 로컬/서버 audit 0건 및 재배포. 이후 문서 전용 배포 기록 커밋이 이어진다.
 
 - `c695539`: 캘린더 보기/시간/반복/수정, Tiptap 블록 Markdown, 실제 드라이브 폴더와 추가 메뉴, 반응형 확장. 운영 반영 완료.
 - `151e06f`: 해당 확장의 검증/배포 문서. 이후 인수인계 문서 정리 커밋이 이어진다.
