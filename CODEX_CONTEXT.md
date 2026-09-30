@@ -5,13 +5,27 @@
 ## 새 PC / 새 Codex 채팅의 시작 순서
 
 1. `AGENTS.md`와 이 문서를 끝까지 읽고 `git status -sb`, `git log -7 --oneline`, 관련 코드를 확인한다. 기존 변경은 보존한다.
-2. **최신 소스는 Windows 서버 또는 개발 PC의 `chi-hub-windows.bundle`로 복원한다.** GitHub main은 `4238593`(2026-09-22)이며 9월 29일 기능 확장이 없다. 아래 bundle 절차를 우선 사용한다.
+2. **2026-09-30 사용자 요청으로 최신 기능과 인수인계 문서를 GitHub main에 push했다.** 새 PC는 아래 GitHub clone 절차로 복원한다. 서버/개발 PC의 Git bundle도 같은 소스로 유지한다. 이후 push는 별도 사용자 요청이 필요하다.
 3. 이번 인수인계 시작 시 로컬·서버 소스와 양쪽 bundle은 `f00871e`로 일치하고 작업 트리는 깨끗했다. 실행 빌드는 `565f0a6`이다. 이 문서 정리 커밋도 완료 시 양쪽에 동기화한다. 문서 전용 커밋으로 소스 HEAD와 실행 빌드가 다른 것은 정상이다.
 4. 새 PC에는 Git, Node 24 LTS(`>=24.13.0 <25`), npm을 설치한다. Tailscale/SSH 인증 및 `chi-server` 별칭은 별도로 준비한다. 저장소를 받는 것만으로 SSH 설정이나 환경 파일이 복원되지는 않는다.
 5. `npm.cmd ci` 실행 후 아래 실행/검증 절차를 따른다. 실제 앱 사용에는 `.env.example`을 참고한 PC 전용 `.env.local`이 필요하다. 운영 Supabase 설정을 사용하면 로컬 CRUD도 실데이터를 바꾼다.
 6. 서버 앱/Caddy/휴지통 작업/키 설정과 적용된 migration은 이미 준비되어 있다. 새 채팅에서 초기 설치나 키 입력을 반복하지 않는다. 최신 배포 상태와 남은 확인 사항은 아래 절을 따른다.
 
-### 최신 소스 복원: Git bundle (PowerShell)
+### 최신 소스 복원: GitHub (PowerShell)
+
+새 빈 작업 폴더의 상위 디렉터리에서 실행한다:
+
+```powershell
+git clone https://github.com/ClCl616/chi-hub.git
+Set-Location chi-hub
+git status -sb
+git log -7 --oneline
+npm.cmd ci
+```
+
+기존 clone은 사용자 변경을 먼저 보존한 뒤 main에서 `git pull --ff-only origin main`으로 갱신한다. 분기가 갈라졌다면 강제 reset하지 않는다. 환경 파일과 SSH 인증은 별도로 준비한다.
+
+### 대체 복원: Git bundle (PowerShell)
 
 SSH 접근이 준비된 새 PC에서 대상 폴더의 상위 디렉터리에서 실행한다:
 
@@ -28,7 +42,7 @@ npm.cmd ci
 
 - 서버 접근이 없으면 현재 개발 PC의 `outputs/chi-hub-windows.bundle`을 안전하게 전달받아 같은 방식으로 복원한다. 서버와 이 로컬 bundle에는 이 문서의 커밋까지 포함한다.
 - bundle에는 main과 Git 이력이 포함된다. `.env.local`, SSH 키, worker 키, node_modules, 빌드, `work/` QA 캡처/임시 스크립트는 포함되지 않는다. `clone -b main`을 사용한다.
-- GitHub main은 마지막 승인된 2026-09-22 소스까지 전달돼 있다. 이후 확장은 로컬/서버 bundle로 복원한다. bundle 복원 직후 origin의 ahead/behind 숫자만으로 최신 여부를 판단하지 말고 필요하면 `git fetch origin`으로 원격 추적 정보를 갱신한다.
+- GitHub main과 bundle 모두 2026-09-30 인수인계까지 포함한다. bundle 복원 직후 origin의 ahead/behind 숫자만으로 최신 여부를 판단하지 말고 필요하면 `git fetch origin`으로 원격 추적 정보를 갱신한다.
 
 기존 clone을 갱신할 때는 먼저 작업 트리가 깨끗한지와 현재 브랜치를 확인한 뒤 실행한다:
 
@@ -42,7 +56,7 @@ npm.cmd ci
 
 경로는 전달받은 실제 bundle로 바꾼다. 분기나 사용자 변경이 있으면 강제 reset/덮어쓰기를 하지 않는다.
 
-GitHub만 사용할 수 있는 경우 `git clone https://github.com/ClCl616/chi-hub.git`으로 2026-09-22 기준 소스를 받을 수 있지만 최신 작업 복원은 아니다. 최신 bundle을 확보해 위 fetch/merge 절차로 갱신한다. origin push는 사용자가 명시적으로 요청할 때만 수행한다.
+origin push는 사용자가 명시적으로 요청할 때만 수행한다.
 
 ## 프로젝트와 유지할 사용자 결정
 
@@ -60,7 +74,7 @@ CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 
 
 ## 현재 운영 상태와 환경 구분
 
-2026-09-29 메모·파일 드래그 정리, 계정 즐겨찾기, 하단 프로필/설정 고정, 학식 필터 제거·핀 배치 개선 `565f0a6`의 로컬 검증·Windows 배포를 완료했다. 계정 설정용 migration과 설정/프로필 API를 추가했으며 의존성 변경은 없다. 아래 실행 빌드를 공개 HTTPS에서 확인했으며 후속 문서 커밋은 앱 재시작 없이 소스/bundle만 동기화한다. GitHub는 마지막 승인된 `4238593` 상태를 유지한다.
+2026-09-29 메모·파일 드래그 정리, 계정 즐겨찾기, 하단 프로필/설정 고정, 학식 필터 제거·핀 배치 개선 `565f0a6`의 로컬 검증·Windows 배포를 완료했다. 계정 설정용 migration과 설정/프로필 API를 추가했으며 의존성 변경은 없다. 아래 실행 빌드를 공개 HTTPS에서 확인했으며 후속 문서 커밋은 앱 재시작 없이 소스/bundle만 동기화한다. GitHub main에는 2026-09-30 사용자 승인으로 최신 기능과 인수인계 문서까지 전달했다.
 
 | 항목 | 현재 상태 |
 | --- | --- |
@@ -236,12 +250,12 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 
 ### 2026-09-30 인수인계 재확인
 
-- 로컬/서버 소스·bundle `f00871e` 일치, 두 작업 트리 clean, GitHub 실제 main `4238593` 확인. 실행 릴리스는 위 표의 `565f0a6`으로 유지됐다.
+- 인수인계 시작 시 로컬/서버 소스·bundle `f00871e` 일치, 두 작업 트리 clean, 당시 GitHub main `4238593` 확인. 실행 릴리스는 위 표의 `565f0a6`으로 유지됐다.
 - 실제 코드의 핀/CSS·학식·드래그·즐겨찾기·폴더 기본값·API 목록 제한과 package.json, 실행/배포/worker 스크립트를 문서와 대조했다.
 - 앱/Caddy Running, loopback health 정상, `127.0.0.1:3000`만 수신, 후보 포트 13000 종료. 공개 health/login/manifest 200, 미인증 preferences/profile 401 확인.
 - CHI-HUB-Trash의 9월 30일 04:00:01 예약 실행 결과 0 확인. 정리 대상이 없을 수도 있으므로 이 결과만으로 실제 삭제 건수를 단정하지 않는다. 정리 작업을 수동 실행하지 않았다.
 - 전체 lint는 기존 routines 42/91행의 no-base-to-string 2건만 실패했다. 앱 코드를 변경하지 않았으며 빌드·브라우저·DB CRUD/Advisor 검사는 이번 문서 작업에서 반복하지 않았다. 위 9월 29일 검증 결과와 구분한다.
-- 문서 커밋 후 서버 소스 및 양쪽 인수인계 bundle만 갱신한다. 앱 재빌드·재시작 및 GitHub push는 하지 않는다.
+- 인수인계 문서 커밋 `20006ec`을 서버 소스와 양쪽 bundle에 반영했다. 이후 사용자 요청으로 GitHub main에도 push했고 이 동기화 안내를 추가했다. 앱 재빌드·재시작은 하지 않았다.
 
 ### 다음 작업 후보와 실제 제약
 
@@ -260,5 +274,5 @@ Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 �
 - `565f0a6` / 배포 기록 `f00871e`: 메모·파일 드래그 이동/순서, 폴더 추가, 즐겨찾기·하단 프로필/설정, 식사 필터 제거·우측 핀. 설정 migration/RLS·충돌 보호, 11화면 회귀 및 Windows 배포.
 - `e96d8d9`, `86d6708`: 학식 세 열, 메모·파일 세로 카드와 우클릭 메뉴, 설정에 단축키 안내 통합. 최신 배치와 기능은 위 구현 설명을 따른다.
 - `eb13304`, `60d70d8`: 간격 복습·메모 30일 휴지통·원본 파일명 다운로드·Windows 조작, fast-uri 간접 의존성 보안 패치.
-- `c695539`: 캘린더 반복/시간, Tiptap Markdown, 드라이브 계층 폴더 확장. `4238593`까지는 GitHub main에 반영됨.
+- `c695539`: 캘린더 반복/시간, Tiptap Markdown, 드라이브 계층 폴더 확장. 과거 GitHub 동기화 기준은 `4238593`이며 현재는 2026-09-30 인수인계까지 반영됨.
 - Windows 자가 호스팅 전환, Caddy/worker 계정 분리 및 이전 배포·문서 이력은 `git log`를 확인한다.
